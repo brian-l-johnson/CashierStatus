@@ -1,0 +1,69 @@
+body {
+    background-color: black;
+}
+
+@keyframes fade {
+  to {
+    background-color: #892BE1;
+  }
+}
+
+
+.updatedCashier {
+  background-color: #FFAC11;
+  animation: fade 30s ease forwards;
+}
+
+.flex-container {
+    display: flex; /* or inline-flex */
+    flex-wrap: wrap;
+    justify-content: space-between;
+}
+
+.cashier-container {
+    border: solid;
+    padding: 10px;
+    background-color: #892BE1;
+    text-align: center;
+    font-family: 'neuropol_x', Gotham, "Helvetica Neue", Helvetica, Arial, "sans-serif";;
+    flex: 1 0 15%;
+}
+
+#statuslog {
+  color: #0A7985;
+  text-align: center;
+}
+
+.formelement {
+  display: flex;
+  justify-content: space-between;
+  width: 60%;
+  margin: 0.5rem;
+}
+label {
+  float: left;
+}
+
+.logError {
+  color: red;
+}
+.logStatus{
+  color: blue;
+}
+
+.servingform {
+  margin: 0 auto;
+  width: 500px;
+}
+
+.closed {
+  background-color: #222;
+}
+
+.menu {
+  background-color: red;
+}
+
+.hidden {
+  display: none;
+}

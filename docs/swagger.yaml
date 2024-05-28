@@ -1,0 +1,109 @@
+definitions:
+  models.Cashier:
+    properties:
+      id:
+        type: integer
+      serving:
+        type: string
+    type: object
+  models.OrderReq:
+    properties:
+      ordernum:
+        type: string
+      ordertime:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /cashiers:
+    get:
+      consumes:
+      - application/json
+      description: Get Cashiers
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Get Cashiers
+      tags:
+      - Cashiers
+    post:
+      consumes:
+      - application/json
+      description: Create a new Cashier
+      parameters:
+      - description: cashier data
+        in: body
+        name: create
+        required: true
+        schema:
+          $ref: '#/definitions/models.Cashier'
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Create Cashier
+      tags:
+      - Cashiers
+  /cashiers/{cid}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cashier ID
+        in: path
+        name: cid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: delete cashier
+      tags:
+      - Cashiers
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Cashier ID
+        in: path
+        name: cid
+        required: true
+        type: string
+      - description: Order Info
+        in: body
+        name: order
+        required: true
+        schema:
+          $ref: '#/definitions/models.OrderReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: set the order number a cashier is servicing
+      tags:
+      - Cashiers
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Health check
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Health Check
+      tags:
+      - status
+swagger: "2.0"

@@ -1,0 +1,170 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/cashiers": {
+            "get": {
+                "description": "Get Cashiers",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Cashiers"
+                ],
+                "summary": "Get Cashiers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new Cashier",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cashiers"
+                ],
+                "summary": "Create Cashier",
+                "parameters": [
+                    {
+                        "description": "cashier data",
+                        "name": "create",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.Cashier"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/cashiers/{cid}": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cashiers"
+                ],
+                "summary": "delete cashier",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cashier ID",
+                        "name": "cid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Cashiers"
+                ],
+                "summary": "set the order number a cashier is servicing",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Cashier ID",
+                        "name": "cid",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Order Info",
+                        "name": "order",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.OrderReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Health check",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "status"
+                ],
+                "summary": "Health Check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.Cashier": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "serving": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.OrderReq": {
+            "type": "object",
+            "properties": {
+                "ordernum": {
+                    "type": "string"
+                },
+                "ordertime": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
