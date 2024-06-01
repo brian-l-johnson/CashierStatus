@@ -1,0 +1,23 @@
+{
+  "name": "CashierStatus",
+  "homepage": "https://github.com/brian-l-johnson/CashierStatus",
+  "authors": [
+    "Brian Johnson <brian.l.johnson@gmail.com>"
+  ],
+  "description": "",
+  "main": "",
+  "license": "MIT",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "static/vendor",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "qrcode.js": "qrcode#^1.0.2",
+    "bootstrap.min": "https://github.com/twbs/bootstrap/blob/v5.3.3/dist/css/bootstrap.min.css"
+  }
+}

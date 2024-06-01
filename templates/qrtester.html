@@ -1,0 +1,63 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>QRCode Tester</title>
+        <script type="text/javascript" src="static/vendor/qrcode.js"></script>
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script>
+            function generateCode() {
+                clearQRCode();
+                let data = {};
+                data["orderid"] = document.forms.qrdata['orderid'].value;
+                data['date'] = new Date().toJSON();
+                const encdata = JSON.stringify(data);
+                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                document.getElementById("datajson").innerText = encdata;
+            }
+
+            function generateRandomOrderId() {
+                const characters = "ABCDEFGHIKJLMN";
+                let result = '';
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+                result += "-";
+                result += Math.floor(Math.random()*1000);
+                return result;
+            }
+            function clearQRCode() {
+                document.getElementById("qrcode").innerHTML = "";
+            }
+
+            function generateRandomCode() {
+                clearQRCode();
+                let data = {};
+                data["orderid"] = generateRandomOrderId();
+                data['date'] = new Date().toJSON();
+                const encdata = JSON.stringify(data);
+                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                document.getElementById("datajson").innerText = encdata;
+            }
+
+        </script>
+
+    </head>
+    <body>
+        <div class="container-fluid">
+            <form onsubmit="return false;" name="qrdata">
+                <div class="form-group">
+                    <label for="orderid">Order ID</label>
+                    <input type="text" class="form-control" name="orderid" id="orderid" placeholder="enter order id, e.g. A-123">
+                </div>
+                <button class="btn btn-primary" onclick="generateCode()">Generate</button>
+                <button class="btn btn-secondary" onclick="generateRandomCode()">Generate Random Order</button>
+            </form>
+            <div class="container" id="qrcode"></div>
+            <div class="container" id="datajson"></div>
+        </div>
+
+
+        <script>
+            
+        </script>
+    </body>
+</html>

@@ -31,3 +31,12 @@ tmp/
 
 # embedded assets
 assits.go
+
+#joe backup files
+*~
+
+#vendor files
+/static/vendor/*
+
+#DS_STORE
+.DS_STORE
