@@ -17,7 +17,7 @@
     "tests"
   ],
   "dependencies": {
-    "qrcode.js": "qrcode#^1.0.2",
-    "bootstrap.min": "https://github.com/twbs/bootstrap/blob/v5.3.3/dist/css/bootstrap.min.css"
+    "bootstrap.min": "https://github.com/twbs/bootstrap/blob/v5.3.3/dist/css/bootstrap.min.css",
+    "qrcode": "https://github.com/janantala/qrcode.js/blob/v1.0.2/lib/qrcode.js"
   }
 }

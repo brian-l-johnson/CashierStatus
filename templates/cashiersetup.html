@@ -1,0 +1,38 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>QRCode Tester</title>
+        <script type="text/javascript" src="static/vendor/qrcode.js"></script>
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script>
+            function generateCode() {
+                clearQRCode();
+                let data = {};
+                data["station"] = document.forms.qrdata['station'].value;
+                data["control"] = "setup-station";
+                const encdata = JSON.stringify(data);
+                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                document.getElementById("datajson").innerText = encdata;
+            }
+
+            function clearQRCode() {
+                document.getElementById("qrcode").innerHTML = "";
+            }
+        </script>
+
+    </head>
+    <body>
+        <div class="container-fluid">
+            <form onsubmit="return false;" name="qrdata">
+                <div class="form-group">
+                    <label for="orderid">Cashier Station</label>
+                    <input type="text" class="form-control" name="staion" id="station" placeholder="enter order station id">
+                </div>
+                <button class="btn btn-primary" onclick="generateCode()">Generate</button>
+            </form>
+            <div class="container" id="qrcode"></div>
+            <div class="container" id="datajson"></div>
+        </div>
+    </body>
+</html>

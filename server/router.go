@@ -45,6 +45,9 @@ func NewRouter() *gin.Engine {
 	router.GET("/qrtester", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "qrtester.html", gin.H{"title": "QRTester"})
 	})
+	router.GET("/cashiersetup", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "cashiersetup.html", gin.H{"title": "Cashier Setup"})
+	})
 
 	return router
 }
