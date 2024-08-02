@@ -6,6 +6,13 @@ definitions:
       serving:
         type: string
     type: object
+  models.MacReq:
+    properties:
+      action:
+        type: string
+      value:
+        type: string
+    type: object
   models.OrderReq:
     properties:
       ordernum:
@@ -13,9 +20,62 @@ definitions:
       ordertime:
         type: string
     type: object
+  models.VerifyMacReq:
+    properties:
+      action:
+        type: string
+      mac:
+        type: string
+      value:
+        type: string
+    type: object
 info:
   contact: {}
 paths:
+  /auth/mac:
+    post:
+      consumes:
+      - application/json
+      description: Calculate HMAC
+      parameters:
+      - description: cashier data
+        in: body
+        name: create
+        required: true
+        schema:
+          $ref: '#/definitions/models.MacReq'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Calculate HMAC for message
+      tags:
+      - Auth
+  /auth/verify:
+    post:
+      consumes:
+      - application/json
+      description: Verify HMAC
+      parameters:
+      - description: data
+        in: body
+        name: create
+        required: true
+        schema:
+          $ref: '#/definitions/models.VerifyMacReq'
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Verify MAC for message
+      tags:
+      - Auth
   /cashiers:
     get:
       consumes:

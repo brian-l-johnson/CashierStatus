@@ -1,0 +1,170 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>QRCode Tester</title>
+        <script type="text/javascript" src="static/vendor/qrcode.js"></script>
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script>
+            function randn_bm(min, max, skew) {
+                let u = 0, v = 0;
+                while(u === 0) u = Math.random() //Converting [0,1) to (0,1)
+                while(v === 0) v = Math.random()
+                let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v )
+                
+                num = num / 10.0 + 0.5 // Translate to 0 -> 1
+                if (num > 1 || num < 0) 
+                    num = randn_bm(min, max, skew) // resample between 0 and 1 if out of range
+                
+                else{
+                    num = Math.pow(num, skew) // Skew
+                    num *= max - min // Stretch to fill range
+                    num += min // offset to min
+                }
+                return Math.floor(num)
+            }
+            
+            function generateCode() {
+                clearQRCode();
+                let data = {};
+                data["orderid"] = document.forms.qrdata['orderid'].value;
+                const encdata = JSON.stringify(data);
+                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                document.getElementById("datajson").innerText = encdata;
+            }
+
+            function generateRandomOrderId() {
+                const characters = "ABCDEFGHIKJLMN";
+                let result = '';
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+                result += "-";
+                result += Math.floor(Math.random()*1000);
+                return result;
+            }
+            function clearQRCode() {
+                document.getElementById("qrcode").innerHTML = "";
+            }
+
+            function generateRandomOrder() {
+                clearQRCode();
+                let data = {};
+
+                let minvar = parseInt(document.forms.qrdata['minvar'].value)
+                let maxvar = parseInt(document.forms.qrdata['maxvar'].value)
+                let maxorder = parseInt(document.forms.qrdata['maxorder'].value)
+                let diff = maxvar-minvar
+                data["txn"] = "" //generateRandomOrderId();
+                data["i"] = []
+                
+                qty = randn_bm(1,maxorder,3)
+                for(i=0; i<qty; i++) {
+                    let rv = Math.floor(Math.random() * diff + minvar)
+                    console.log(rv)
+                    data["i"].push({"v":rv, "q": randn_bm(1,5,2)})
+                }
+
+                const encdata = JSON.stringify(data);
+                console.log(encdata)
+                document.getElementById("datajson").innerText = encdata;
+                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+   
+            }
+
+            function showtype(src) {
+                if (src == "random") {
+                    document.getElementById("random-order").style.display = "block"
+                    document.getElementById("constructed-order").style.display = "none"
+                } 
+                else if (src == "constructed") {
+                    document.getElementById("random-order").style.display = "none"
+                    document.getElementById("constructed-order").style.display = "block"
+                }
+                else {
+                    document.getElementById("random-order").style.display = "none"
+                    document.getElementById("constructed-order").style.display = "block"
+                    data = JSON.stringify({"control": "info"})
+                    let qrcode = new QRCode(document.getElementById("qrcode"), data);
+
+
+                }
+            }
+            
+            var items = []
+
+            function addItem() {
+                i = parseInt(document.getElementById("i").value)
+                q = parseInt(document.getElementById("q").value)
+                items.push({"v": i, "q":q})
+                ele = document.getElementById("item-list")
+                let li = document.createElement("li")
+                li.appendChild(document.createTextNode(i+":"+q))
+                ele.appendChild(li)
+            }
+
+            function generateContructedOrder() {
+                clearQRCode();
+                let data = {};
+                data["txn"] = "" //generateRandomOrderId();
+                data["i"] = items
+                
+                const encdata = JSON.stringify(data);
+                console.log(encdata)
+                document.getElementById("datajson").innerText = encdata;
+                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                   
+            }
+
+        </script>
+
+    </head>
+    <body>
+        <div class="container-fluid" id="order-selector">
+            <input type="radio" id="random" name="order-type" onchange="showtype(this.value)" value="random" checked> <label for="random">Random Order</label><br/>
+            <input type="radio" id="constructed" name="order-type" onchange="showtype(this.value)" value="constructed"> <label for="contstructed">Constructed Order</label><br/>
+            <input type="radio" id="info" name="order-type" onchange="showtype(this.value)"> <label for="info">Info</label>
+        </div>
+        <div class="container-fluid" id="constructed-order" style="display:none">
+            <div class="container-fluid">
+                <ul id="item-list">
+
+                </ul>
+            </div>
+            <form onsubmit="return false;" name="constructed-qr" id="constructed-form">
+                <div class="form-group">
+                    <label for="i1">Item</label>
+                    <input type="text" class="form-control" id="i" name="i" placeholder="item id">
+                </div>
+                <div class="form-group">
+                    <label for="q1">Quantity</label>
+                    <input type="text" class="form-control" id="q" name="q" placeholder="item quantity">
+                </div>
+                <button class="btn btn-secondary" onclick="addItem()">Add Item</button>
+                <button class="btn btn-secondary" onclick="generateContructedOrder()">Generate Order</button>
+
+            </form>
+        </div>
+
+        <div class="container-fluid" id="random-order">
+            <form onsubmit="return false;" name="qrdata">
+                <div class="form-group">
+                    <label for="minvar">Minimum Variation ID</label>
+                    <input type="text" class="form-control" name="minvar" id="minvar" value="1" placeholder="enter order id, e.g. A-123">
+                </div>
+                <div class="form-group">
+                    <label for="maxvar">Maximum Variation ID</label>
+                    <input type="text" class="form-control" name="maxvar" id="maxvar" value="50" placeholder="enter order id, e.g. A-123">
+                </div>
+                <div class="form-group">
+                    <label for="maxorder">Maximum items in order</label>
+                    <input type="text" class="form-control" name="maxorder" id="maxorder" value="25" placeholder="enter order id, e.g. A-123">
+                </div>
+
+                <button class="btn btn-secondary" onclick="generateRandomOrder()">Generate Random Order</button>
+            </form>
+        </div>
+        <div class="container-fluid">
+            <div class="container" id="qrcode"></div>
+            <div class="container" id="datajson"></div>
+        </div>
+    </body>
+</html>

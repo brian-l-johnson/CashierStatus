@@ -1,0 +1,47 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Login</title>
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+    </head>
+    <body class="container-fluid">
+        <main class="form-signin w-100 m-auto">
+            <form id="loginform" action="" name="login" onsubmit="doLogin(event)">
+                <h1 class ="h4 mb-3 fw-normal">Please Sign in</h1>
+                <div style="display:none; color:red" id="loginerr">
+                    <h3 class="h3 mb-3 fw-normal">Invalid username or password</h3>
+                </div>
+                <div class="form-floating">
+                    <input type="text" name="user" class="form-control" id="floatingInput" placeholder="username">
+                    <label for="floatingInput">User name</label>
+                </div>
+                <div class="form-floating">
+                    <input type="password" name="password" class="form-control" id="floatingPassword" placeholder="Password">
+                    <label for="floatingPassword">Password</label>
+                </div>
+                <button class="btn btn-primary w-100 py-2" type="submit">Sign In</button>
+            </form>
+            <div class="container">
+                <a href="/register.html">Register</a>
+            </div>
+            <script>
+           
+                async function doLogin(event) {
+                    event.preventDefault();
+                    const formData = new FormData(document.login);
+                    //const responseData = await postFormDataAsJson("{{getAPIBaseURL}}/auth/login", formData);
+                    //console.log(responseData)
+                    //console.log(event)
+                    console.log(responseData.message)
+                    if(responseData.message == "login success") {
+                        //document.location = "{{getAPIBaseURL}}/main.html"
+                    }
+                    else {
+                        document.getElementById("loginerr").style.display = "block"
+                    }
+                }
+            </script>
+        </main>
+    </body>
+</html>

@@ -15,6 +15,74 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/mac": {
+            "post": {
+                "description": "Calculate HMAC",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Calculate HMAC for message",
+                "parameters": [
+                    {
+                        "description": "cashier data",
+                        "name": "create",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.MacReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify": {
+            "post": {
+                "description": "Verify HMAC",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify MAC for message",
+                "parameters": [
+                    {
+                        "description": "data",
+                        "name": "create",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.VerifyMacReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/cashiers": {
             "get": {
                 "description": "Get Cashiers",
@@ -166,6 +234,17 @@ const docTemplate = `{
                 }
             }
         },
+        "models.MacReq": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
         "models.OrderReq": {
             "type": "object",
             "properties": {
@@ -173,6 +252,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "ordertime": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.VerifyMacReq": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "mac": {
+                    "type": "string"
+                },
+                "value": {
                     "type": "string"
                 }
             }

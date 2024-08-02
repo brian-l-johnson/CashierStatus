@@ -1,7 +1,9 @@
 package server
 
 import (
+	"html/template"
 	"net/http"
+	"os"
 
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/controllers"
 	docs "github.com/brian-l-johnson/CashierStatusBoard/v2/docs"
@@ -9,6 +11,10 @@ import (
 	swaggerfiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
+
+func getAPIBaseURL() string {
+	return os.Getenv("API_BASE_URL")
+}
 
 func NewRouter() *gin.Engine {
 	router := gin.New()
@@ -26,12 +32,20 @@ func NewRouter() *gin.Engine {
 	router.DELETE("/cashiers/:cid", cashiers.DeleteCashier)
 	router.GET("/cashiers/getupdate-ws", cashiers.GetCashierUpdates)
 
+	auth := new(controllers.AuthController)
+	router.POST("/auth/mac", auth.Mac)
+	router.POST("/auth/verify", auth.Verify)
+
 	docs.SwaggerInfo.BasePath = "/"
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 
 	//static
 	router.Static("/static", "./static")
+
+	router.SetFuncMap(template.FuncMap{
+		"getAPIBaseURL": getAPIBaseURL,
+	})
 
 	//templates
 	router.LoadHTMLGlob("templates/*")
@@ -44,6 +58,9 @@ func NewRouter() *gin.Engine {
 	})
 	router.GET("/qrtester", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "qrtester.html", gin.H{"title": "QRTester"})
+	})
+	router.GET("/ordertester", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "ordertester.html", gin.H{"title": "QRTester"})
 	})
 	router.GET("/cashiersetup", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "cashiersetup.html", gin.H{"title": "Cashier Setup"})
