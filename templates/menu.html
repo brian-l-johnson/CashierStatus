@@ -1,0 +1,46 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand" href="#">Cashier Status</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+  
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav mr-auto">
+        <li class="nav-item active">
+          <a class="nav-link" href="/">Home </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/update">
+                Manual Assign Order
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/ordertester">Order Tester</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/cashiersetup">Cashier Setup</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/qrtester">QR Tester</a>
+        </li>
+        {{if .roles | isAdmin}}
+        <li class="nav-item">
+            <a class="nav-link" href="/users">User Management</a>
+        </li>
+        {{end}}
+
+
+      </ul>
+    </div>
+
+    <div class="collapse navbar-collapse">
+        <ul class="navbar-nav ml-auto">
+            <li class="nav-item navbar-text">
+                {{ .user }}
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/logout.html">Logout</a>
+            </li>
+        </ul>
+    </div>
+  </nav>

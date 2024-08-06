@@ -1,0 +1,46 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Register</title>
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script src="static/common.js"></script>
+    </head>
+    <body>
+    <main class="form-signin w-100 m-auto">
+            <form id="registerForm" action="" name="register" onsubmit="doRegister(event)">
+                <h1 class ="h4 mb-3 fw-normal">Register A New Account</h1>
+                <div style="display:none;" id="messages">
+                </div>
+                <div class="form-floating">
+                    <input type="text" name="name" class="form-control" id="floatingInput" placeholder="username">
+                    <label for="floatingInput">User name</label>
+                </div>
+                <div class="form-floating">
+                    <input type="password" name="password" class="form-control" id="floatingPassword" placeholder="Password">
+                    <label for="floatingPassword">Password</label>
+                </div>
+                <button class="btn btn-primary w-100 py-2" type="submit">Register</button>
+            </form>
+        </main>
+        <script>
+            async function doRegister(event) {
+                event.preventDefault()
+                console.log(event)
+                const formData = new FormData(document.register);
+                const responseData = await postFormDataAsJson("{{getAPIBaseURL}}/auth/register", formData);
+                console.log(responseData.message)
+                ele = document.getElementById("messages")
+                if(responseData.status == "success") {
+                    ele.innerText = "Registration Success! once your account has been activated you will be able to sign in"
+                    ele.style.display = "block"
+                }
+                else {
+                    ele.innerText = "Registration Failure!"
+                    ele.style.display = "block"
+                    ele.style.color = "red"
+                }
+            }
+        </script>
+    </body>
+</html>

@@ -118,6 +118,7 @@
 
     </head>
     <body>
+        {{ template "menu.html" . }}
         <div class="container-fluid" id="order-selector">
             <input type="radio" id="random" name="order-type" onchange="showtype(this.value)" value="random" checked> <label for="random">Random Order</label><br/>
             <input type="radio" id="constructed" name="order-type" onchange="showtype(this.value)" value="constructed"> <label for="contstructed">Constructed Order</label><br/>

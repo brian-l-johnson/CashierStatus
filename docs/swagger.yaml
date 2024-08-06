@@ -6,6 +6,13 @@ definitions:
       serving:
         type: string
     type: object
+  models.LoginReq:
+    properties:
+      password:
+        type: string
+      user:
+        type: string
+    type: object
   models.MacReq:
     properties:
       action:
@@ -32,6 +39,42 @@ definitions:
 info:
   contact: {}
 paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Login a user
+      parameters:
+      - description: Login Data
+        in: body
+        name: login
+        required: true
+        schema:
+          $ref: '#/definitions/models.LoginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Login
+      tags:
+      - user
+  /auth/logout:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: json
+      summary: Logout
+      tags:
+      - user
   /auth/mac:
     post:
       consumes:
@@ -54,6 +97,21 @@ paths:
       summary: Calculate HMAC for message
       tags:
       - Auth
+  /auth/status:
+    get:
+      consumes:
+      - application/json
+      description: Check login status
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Auth Status
+      tags:
+      - user
   /auth/verify:
     post:
       consumes:

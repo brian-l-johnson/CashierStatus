@@ -1,0 +1,87 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Register</title>
+        <link href="/static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script src="/static/common.js"></script>
+        <script src="/static/vendor/alpine.js" defer></script>
+    </head>
+    <body>
+        {{ template "menu.html" . }}
+
+        <div class="jumbotron">
+            <div x-data="createDataRetriever()" x-init="getData()">
+                <table>
+                    <tr>
+                        <th>Name</th>
+                        <th>Active</th>
+                        <th>Admin</th>
+                        <th>Update</th>
+                        <th>Viewer</th>
+                    </tr>
+                    <template x-for="user in users" :key="user.UID">
+                        <tr x-data="{ user: user}">
+                            <td><span x-text="user.Name"></span></td>
+                            <td><input type="checkbox" value="true" x-model="user.Active"></td>
+                            <td><input type="checkbox" value="admin" x-model="user.Roles"></td>
+                            <td><input type="checkbox" value="update" x-model="user.Roles"></td>
+                            <td><input type="checkbox" value="view" x-model="user.Roles"></td>
+                            <td><button @click="doUpdate(user)">Update User</button></td>
+                        </tr>
+                    </template>
+                </table>
+            </div>
+        </div>
+        <div id="messages"></div>
+        <script>
+            async function doUpdate(user) {
+                console.log(user)
+                console.log(user.UID)
+                console.log(user.Roles)
+
+
+                let d = {active: user.Active, roles: user.Roles}
+                
+
+
+                const responseData = await putJson("{{getAPIBaseURL}}/auth/users/"+user.UID, JSON.stringify(d));
+                ele = document.getElementById("messages")
+                if (responseData.status == "success") {
+                    ele.innerText = "Successfully updated "+user.Name
+                } else {
+                    ele.innerText = "Failed to update"+user.Name
+                }
+
+
+            }
+
+
+            function createDataRetriever() {
+                return {
+                    isLoading: false,
+                    users: [],
+                    getData() {
+                        setInterval(() => {
+                            this.isLoading = true;
+                            fetch('{{getAPIBaseURL}}/auth/users')
+                            .then((response) => {
+                                if (response.status === 401) {
+                                    document.location = "{{getAPIBaseURL}}/login.html?from=users.html"
+                                } else {
+                                    return response.json()
+                                }
+                            })
+                            .then((data) => {
+                                this.users = data;
+                                this.isLoading = false;
+                            });
+                        }, 5000)
+                    }
+                }
+            }
+        </script>
+
+
+    </body>
+</html>

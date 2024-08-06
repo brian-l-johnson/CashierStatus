@@ -2,6 +2,8 @@
     <head>
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <link href="static/common.css" rel="stylesheet" />
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+
         <title>Now Serving Manual Update</title>
         <script>
             async function getCashierList() {
@@ -62,19 +64,23 @@
         </script>
 
     </head>
-    <body style="color:#DB1675">
-        <form class="servingform" name="servingform" onsubmit="return false;">
-            <h1>Update Now Serving</h1>
-            <div class="formelement">
-                <label for="cashier-list">Cashier ID</label>
-                <select name="cashier-list" id="cashier-list"></select>
-            </div>
-            <div class="formelement">
-                <label for="order-id">Order Number</label>
-                <input type="text" name="order-id" id="order-id" placeholder="order nuber">
-            </div>
-            <button onclick="updateServing()">Update</button>
-        </form>
+    <body>
+        {{ template "menu.html" . }}
+        <div class="container-fluid">
+            <form class="servingform" name="servingform" onsubmit="return false;">
+                <h1>Update Now Serving</h1>
+                <div class="formelement">
+                    <label for="cashier-list">Cashier ID</label>
+                    <select name="cashier-list" class="form-control" id="cashier-list"></select>
+                </div>
+                <div class="formelement">
+                    <label for="order-id">Order Number</label>
+                    <input type="text" class="form-control" name="order-id" id="order-id" placeholder="order nuber">
+                </div>
+                <button class="btn btn-secondary" onclick="updateServing()">Update</button>
+            </form>
+        </div>
+
         
     </body>
  

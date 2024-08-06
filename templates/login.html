@@ -4,6 +4,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <title>Login</title>
         <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script src="static/common.js"></script>
     </head>
     <body class="container-fluid">
         <main class="form-signin w-100 m-auto">
@@ -30,12 +31,12 @@
                 async function doLogin(event) {
                     event.preventDefault();
                     const formData = new FormData(document.login);
-                    //const responseData = await postFormDataAsJson("{{getAPIBaseURL}}/auth/login", formData);
-                    //console.log(responseData)
-                    //console.log(event)
+                    const responseData = await postFormDataAsJson("{{getAPIBaseURL}}/auth/login", formData);
+                    console.log(responseData)
+                    console.log(event)
                     console.log(responseData.message)
                     if(responseData.message == "login success") {
-                        //document.location = "{{getAPIBaseURL}}/main.html"
+                        document.location = "{{getAPIBaseURL}}/"
                     }
                     else {
                         document.getElementById("loginerr").style.display = "block"

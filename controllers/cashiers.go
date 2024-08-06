@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/models"
@@ -18,6 +20,16 @@ type CashierController struct{}
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		allowed := os.Getenv("WEBSOCKET_ALLOWED_ORIGINS")
+		fmt.Printf("current origin is: %v\n", r.Header["Origin"][0])
+		for _, origin := range strings.Split(allowed, `,`) {
+			if origin == r.Header["Origin"][0] {
+				return true
+			}
+		}
+		return false
+	},
 }
 
 var mutex = &sync.Mutex{}
@@ -174,6 +186,7 @@ func (h CashierController) DeleteCashier(c *gin.Context) {
 func (h CashierController) GetCashierUpdates(c *gin.Context) {
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
+		fmt.Println(err)
 		c.JSON(http.StatusInternalServerError, gin.H{"status": "Error", "message": err.Error})
 		return
 	} else {
