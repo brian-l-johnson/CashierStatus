@@ -1,0 +1,128 @@
+<html>
+    <head>
+        <link href="static/common.css" rel="stylesheet" />
+        <script>
+            const WEB_SOCKET_HOST = window.location.host;
+            const WEB_SOCKET_PROTOCOL = "ws://";
+            const WEB_SOCKET_PATH = "/cashiers/getupdate-ws";
+
+            function createCashier(num, serving) {
+                newCashier = document.createElement("div");
+                newCashier.id ="cashier-"+num;
+                newCashier.className = "cashier-container"
+                newCashierLabel = document.createElement("h1");
+                newCashierLabel.innerText = "Cashier "+num;
+                newCashier.append(newCashierLabel);
+
+                newServing = document.createElement('h2');
+                newServing.id = "serving-"+num;
+                if(serving === "") {
+                    newServing.innerText = "closed";
+                    newCashier.classList.add("closed");
+                }
+                else {
+                    newServing.innerText = serving
+                }
+                newCashier.append(newServing);
+
+                ele = document.getElementById("cashier-container");
+                ele.append(newCashier);
+            }
+
+
+            async function getCashierList() {
+                try {
+                    const response = await fetch("/cashiers");
+                    if (!response.ok) {
+                        throw new Error("Failed to make request for cashier")
+                    } else {
+                        const data = await response.json();
+                        data.forEach(function(c) {
+                            createCashier(c.ID, c.Serving);
+                        })
+                    }
+                } catch (error) {
+                    console.error("There has been a problem with your fetch operation:", error);
+                }            
+            }
+
+            function subscribeToUpdates() {
+                //logMessage("connecting to server...", "status");
+                const updatesSocket = new WebSocket(WEB_SOCKET_PROTOCOL+WEB_SOCKET_HOST+WEB_SOCKET_PATH);
+                updatesSocket.onmessage = function(event) {
+                    console.log(event.data);
+                    data = JSON.parse(event.data);
+                    switch (data.type) {
+                        case "update":
+                            updateCashierServing(data['cashier'], data['serving']);
+                            break;
+                        default:
+                            consoleç.log("unandled type");
+                            break;
+                    }
+                }
+                updatesSocket.onclose = function(event) {
+                    console.log("websocket closed");
+                    logMessage("lost connection to server!", "error");
+                    setTimeout(function() { subscribeToUpdates()}, 1000);
+                }
+                updatesSocket.onerror = function(event) {
+                    logMessage("websocket error!", "error");
+                }
+                updatesSocket.onopen = function(event) {
+                    logMessage("websocket connected!", "status");
+                }
+            }
+            function markCashierClosed(id) {
+                containerEle = document.getElementById("cashier-"+id);
+                containerEle.classList.add("closed");
+                servingEle = document.getElementById("serving-"+id);
+                servingEle.innerText = "closed";
+            }
+
+            function logMessage(message, type="log") {
+                logEle = document.getElementById("statuslog");
+                var logItem = document.createElement("h1");
+                logItem.innerText = message;
+                switch (type) {
+                    case "error":
+                        logItem.classList.add("logError");
+                        break;
+                    case "status":
+                        logItem.classList.add("logStatus");
+                        break;
+                }
+                logEle.insertBefore(logItem, logEle.firstChild);  
+                
+                if(logEle.childElementCount > 10) {
+                    logEle.removeChild(logEle.lastChild);
+                }
+                
+            }
+
+            function updateCashierServing(id, serving) {
+                logMessage(msg);
+            }
+
+            function checkKeyPressed(evt) {
+                if (evt.keyCode == "77") { //m
+                    document.getElementById('menu').classList.remove("hidden");
+                } else if (evt.keyCode == "27") { //esc
+                    document.getElementById('menu').classList.add("hidden");
+                }
+            }
+
+            function startUp() {
+                getCashierList();
+                subscribeToUpdates();
+            }
+
+            window.onLoad = startUp();
+            window.addEventListener("keydown", checkKeyPressed, false);
+
+        </script>
+    </head>
+    <body>
+        <div id="statuslog" class="statuslog"></div>
+    </body>
+</html>

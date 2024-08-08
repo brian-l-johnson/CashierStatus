@@ -72,6 +72,9 @@ func NewRouter() *gin.Engine {
 	router.GET("/", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "main.html", gin.H{"title": "Now Serving"})
 	})
+	router.GET("/status", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "status.html", gin.H{})
+	})
 	router.GET("/update", middleware.Authorize("update"), func(c *gin.Context) {
 		session := sessions.Default(c)
 		user := session.Get("user")
