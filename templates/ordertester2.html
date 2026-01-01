@@ -1,0 +1,51 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>QRCode Tester</title>
+        <script type="text/javascript" src="static/vendor/qrcode.js"></script>
+        <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <script>
+
+            
+
+            function clearQRCode() {
+                document.getElementById("qrcode").innerHTML = "";
+            }
+
+            var items = []
+
+
+            function generateContructedOrder() {
+                clearQRCode();
+                let data = {};
+                
+                let o = document.getElementById("i").value;
+                let qrcode = new QRCode(document.getElementById("qrcode"), o);
+
+
+            }
+
+        </script>
+
+    </head>
+    <body>
+        {{ template "menu.html" . }}
+
+        <div class="container-fluid" id="constructed-order">
+            <form onsubmit="return false;" name="constructed-qr" id="constructed-form">
+                <div class="form-group">
+                    <label for="i1">Order</label>
+                    <input type="text" class="form-control" id="i" name="i" placeholder="compact order">
+                </div>
+  
+                <button class="btn btn-secondary" onclick="generateContructedOrder()">Generate Order</button>
+
+            </form>
+        </div>
+        <div class="container-fluid">
+            <div class="container" id="qrcode"></div>
+            <div class="container" id="datajson"></div>
+        </div>
+    </body>
+</html>

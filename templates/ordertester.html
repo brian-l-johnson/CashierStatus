@@ -4,6 +4,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
         <title>QRCode Tester</title>
         <script type="text/javascript" src="static/vendor/qrcode.js"></script>
+        <script type="text/javascript" src="static/ht-qr.js"></script>
         <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
         <script>
             function randn_bm(min, max, skew) {
@@ -43,6 +44,7 @@
             }
             function clearQRCode() {
                 document.getElementById("qrcode").innerHTML = "";
+                document.getElementById("qrcompact").innerHTML = "";
             }
 
             function generateRandomOrder() {
@@ -53,20 +55,38 @@
                 let maxvar = parseInt(document.forms.qrdata['maxvar'].value)
                 let maxorder = parseInt(document.forms.qrdata['maxorder'].value)
                 let diff = maxvar-minvar
-                data["txn"] = "" //generateRandomOrderId();
-                data["i"] = []
+
+                if(include_txn) {
+                     data["txn"] = generateRandomOrderId();
+                }
+                data['cc'] = 123;
+                data['p'] = "A726";
+                data["i"] = [];
                 
                 qty = randn_bm(1,maxorder,3)
                 for(i=0; i<qty; i++) {
-                    let rv = Math.floor(Math.random() * diff + minvar)
-                    console.log(rv)
-                    data["i"].push({"v":rv, "q": randn_bm(1,5,2)})
+                    if(inventory_ids.length > 0) {
+                        console.log(inventory_ids.length);
+                        let rv = inventory_ids[Math.floor(Math.random() * inventory_ids.length)];
+                        console.log(rv);
+                        data["i"].push({"v":rv, "q": randn_bm(1,5,2)});
+                    }
+                    else {
+                        let rv = Math.floor(Math.random() * diff + minvar);
+                        console.log(rv);
+                        data["i"].push({"v":rv, "q": randn_bm(1,5,2)});
+                    }
+
                 }
 
                 const encdata = JSON.stringify(data);
-                console.log(encdata)
+                console.log(encdata);
+                const compact = encode(data);
+                console.log(compact);
+                document.getElementById("compact").innerText = compact;
                 document.getElementById("datajson").innerText = encdata;
-                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                //let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
+                let cqrcode = new QRCode(document.getElementById("qrcompact"), compact);
    
             }
 
@@ -84,11 +104,13 @@
                     document.getElementById("constructed-order").style.display = "block"
                     data = JSON.stringify({"control": "info"})
                     let qrcode = new QRCode(document.getElementById("qrcode"), data);
-
-
                 }
             }
-            
+            var include_txn = true
+            function toggleIncludeTXN(val) {
+                include_txn = val
+            }
+
             var items = []
 
             function addItem() {
@@ -104,8 +126,14 @@
             function generateContructedOrder() {
                 clearQRCode();
                 let data = {};
-                data["txn"] = "" //generateRandomOrderId();
+
+
+                if(include_txn) {
+                     data["txn"] = generateRandomOrderId();
+                }
                 data["i"] = items
+                data['cc'] = "123"
+                data['p'] = "A726"
                 
                 const encdata = JSON.stringify(data);
                 console.log(encdata)
@@ -113,6 +141,35 @@
                 let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
                    
             }
+            var inventory_url = "http://127.0.0.1:8080/static/mockInventory.json";
+            function updateInventoryURL(url) {
+                console.log(url);
+                inventory_url = url;
+            }
+
+            var inventory_ids = [];
+
+            async function fetchInventory() {
+                console.log("in fetchInvetory");
+                try {
+                    const response = await fetch(inventory_url);
+                    if (!response.ok) {
+                        throw new Error(`Response status: ${response.status}`);
+                    }
+                    const data = await response.json();
+                    console.log(data);
+                    data.forEach(element => {
+                        if(element.variant_stock_status == "IN") {
+                            console.log(element);
+                            inventory_ids.push(element.variant_id);
+                        }
+                    });
+                    console.log(inventory_ids);
+                } catch(error) {
+                    console.log(error.message);
+                }
+            }
+
 
         </script>
 
@@ -120,9 +177,20 @@
     <body>
         {{ template "menu.html" . }}
         <div class="container-fluid" id="order-selector">
+            <h2>Order type</h3>
             <input type="radio" id="random" name="order-type" onchange="showtype(this.value)" value="random" checked> <label for="random">Random Order</label><br/>
             <input type="radio" id="constructed" name="order-type" onchange="showtype(this.value)" value="constructed"> <label for="contstructed">Constructed Order</label><br/>
             <input type="radio" id="info" name="order-type" onchange="showtype(this.value)"> <label for="info">Info</label>
+        </div>
+        <div class="container-fluid" id="include-txn-selector">
+            <h2>Include TXN</h3>
+            <input type="radio" id="itxn" name="include-txn" value="true" onchange="toggleIncludeTXN(true)" checked> <label for="itxn">Include txn</label> <br />
+            <input type="radio" id="extn" name="include-txn" value="false" onchange="toggleIncludeTXN(false)"> <label for="etxn">Exclude txn</label>
+        </div>
+        <div class="container-fluid">
+            <h2>Inventory URL</h2>
+            <input type="text" name="inventory-url" id="inventory-url" placeholder="http://127.0.0.1:8080/static/mockInventory.json" onchange="updateInventoryURL(this.value)">
+            <button name="fetch-inventory" onclick="fetchInventory()" value="fetch inventory" class="btn btn-secondary">Fetch Inventory</button>
         </div>
         <div class="container-fluid" id="constructed-order" style="display:none">
             <div class="container-fluid">
@@ -165,7 +233,9 @@
         </div>
         <div class="container-fluid">
             <div class="container" id="qrcode"></div>
+            <div class="container" id="qrcompact"></div>
             <div class="container" id="datajson"></div>
+            <div class="container" id="compact"></div>
         </div>
     </body>
 </html>

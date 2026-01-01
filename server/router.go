@@ -83,11 +83,25 @@ func NewRouter() *gin.Engine {
 		c.HTML(http.StatusOK, "manual.html", gin.H{"title": "Manual Update", "user": user, "roles": roles})
 	})
 	router.GET("/qrtester", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "qrtester.html", gin.H{"title": "QRTester"})
+		session := sessions.Default(c)
+		user := session.Get("user")
+		roles := session.Get("roles")
+		c.HTML(http.StatusOK, "qrtester.html", gin.H{"title": "QRTester", "user": user, "roles": roles})
 	})
 	router.GET("/ordertester", func(c *gin.Context) {
-		c.HTML(http.StatusOK, "ordertester.html", gin.H{"title": "QRTester"})
+		session := sessions.Default(c)
+		user := session.Get("user")
+		roles := session.Get("roles")
+		c.HTML(http.StatusOK, "ordertester.html", gin.H{"title": "QRTester", "user": user, "roles": roles})
 	})
+
+	router.GET("/ordertester2", func(c *gin.Context) {
+		session := sessions.Default(c)
+		user := session.Get("user")
+		roles := session.Get("roles")
+		c.HTML(http.StatusOK, "ordertester2.html", gin.H{"title": "QRTester2", "user": user, "roles": roles})
+	})
+
 	router.GET("/cashiersetup", middleware.Authorize("admin"), func(c *gin.Context) {
 		session := sessions.Default(c)
 		user := session.Get("user")
