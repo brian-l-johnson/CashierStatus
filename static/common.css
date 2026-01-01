@@ -4,13 +4,13 @@ body {
 
 @keyframes fade {
   to {
-    background-color: #892BE1;
+    background-color: #47a; /* #892BE1; */
   }
 }
 
 
 .updatedCashier {
-  background-color: #FFAC11;
+  background-color: #CB4;/*#FFAC11;*/
   animation: fade 30s ease forwards;
 }
 
@@ -23,14 +23,14 @@ body {
 .cashier-container {
     border: solid;
     padding: 10px;
-    background-color: #892BE1;
+    background-color: #47a; /* #892BE1; */
     text-align: center;
     font-family: 'neuropol_x', Gotham, "Helvetica Neue", Helvetica, Arial, "sans-serif";;
     flex: 1 0 15%;
 }
 
 #statuslog {
-  color: #0A7985;
+  color: #47a;
   text-align: center;
 }
 
