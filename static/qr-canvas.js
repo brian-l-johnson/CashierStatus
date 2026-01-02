@@ -41,11 +41,11 @@
     }
 
     /**
-     * Error correction levels (compatible with qrcode-generator library)
+     * Error correction levels (matches qrcode-generator library values)
      */
     QRCode.CorrectLevel = {
         L: 1,  // ~7% correction
-        M: 0,  // ~15% correction
+        M: 0,  // ~15% correction (default)
         Q: 3,  // ~25% correction
         H: 2   // ~30% correction
     };
@@ -63,22 +63,16 @@
         this.options.text = text;
 
         // Determine optimal type number (QR code version) based on text length
-        var typeNumber = this._getTypeNumber(text, this.options.correctLevel);
+        var typeNumber = this._getTypeNumber(text);
 
-        // Map our error correction levels to qrcode-generator levels
+        // Get error correction level (defaults to M if not set)
         var errorCorrectionLevel = this.options.correctLevel;
-        if (typeof qrcode.ErrorCorrectLevel !== 'undefined') {
-            // Use the library's error correction levels
-            var levelMap = {
-                1: qrcode.ErrorCorrectLevel.L,
-                0: qrcode.ErrorCorrectLevel.M,
-                3: qrcode.ErrorCorrectLevel.Q,
-                2: qrcode.ErrorCorrectLevel.H
-            };
-            errorCorrectionLevel = levelMap[this.options.correctLevel] || qrcode.ErrorCorrectLevel.M;
+        if (typeof errorCorrectionLevel === 'undefined' || errorCorrectionLevel === null) {
+            errorCorrectionLevel = QRCode.CorrectLevel.M; // Default to M (0)
         }
 
         // Create QR code using qrcode-generator library
+        // The library expects numeric values: L=1, M=0, Q=3, H=2
         var qr = qrcode(typeNumber, errorCorrectionLevel);
         qr.addData(text);
         qr.make();
@@ -88,18 +82,13 @@
     };
 
     /**
-     * Determine QR code type number (version) based on text length and error correction level
+     * Determine QR code type number (version) based on text length
      * @private
      */
-    QRCode.prototype._getTypeNumber = function(text, errorCorrectLevel) {
-        // Simple heuristic - qrcode-generator library will auto-adjust if needed
-        var length = text.length;
-
-        if (length <= 20) return 0;   // Auto-detect for short text
-        if (length <= 50) return 5;
-        if (length <= 100) return 10;
-        if (length <= 200) return 15;
-        return 20;
+    QRCode.prototype._getTypeNumber = function(text) {
+        // Use 0 for auto-detect - qrcode-generator will choose optimal version
+        // This is more reliable than trying to estimate
+        return 0;
     };
 
     /**
