@@ -96,9 +96,34 @@
      * @private
      */
     QRCode.prototype._getTypeNumber = function(text) {
-        // Use 0 for auto-detect - qrcode-generator will choose optimal version
-        // This is more reliable than trying to estimate
-        return 0;
+        // Calculate appropriate type number based on data length
+        // Auto-detect (0) has issues with errorCorrectionLevel, so we calculate it
+        var length = text.length;
+
+        // These are approximate - for error correction level M
+        if (length <= 14) return 1;
+        if (length <= 26) return 2;
+        if (length <= 42) return 3;
+        if (length <= 62) return 4;
+        if (length <= 84) return 5;
+        if (length <= 106) return 6;
+        if (length <= 122) return 7;
+        if (length <= 152) return 8;
+        if (length <= 180) return 9;
+        if (length <= 213) return 10;
+        if (length <= 251) return 11;
+        if (length <= 287) return 12;
+        if (length <= 331) return 13;
+        if (length <= 362) return 14;
+        if (length <= 412) return 15;
+        if (length <= 450) return 16;
+        if (length <= 504) return 17;
+        if (length <= 560) return 18;
+        if (length <= 624) return 19;
+        if (length <= 666) return 20;
+
+        // For very long data, use higher versions
+        return Math.min(40, Math.ceil(length / 40));
     };
 
     /**
