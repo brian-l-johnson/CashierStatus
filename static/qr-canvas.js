@@ -7,11 +7,6 @@
 (function(global) {
     'use strict';
 
-    // Check if qrcode-generator library is loaded
-    if (typeof qrcode === 'undefined') {
-        throw new Error('qrcode-generator library not loaded. Include qrcode-generator.min.js before qr-canvas.js');
-    }
-
     /**
      * QRCode constructor - Compatible with old qrcode.js API
      * @param {HTMLElement|string} element - Target element or element ID
@@ -49,10 +44,10 @@
      * Error correction levels (compatible with qrcode-generator library)
      */
     QRCode.CorrectLevel = {
-        L: qrcode.ErrorCorrectLevel.L,  // ~7% correction
-        M: qrcode.ErrorCorrectLevel.M,  // ~15% correction
-        Q: qrcode.ErrorCorrectLevel.Q,  // ~25% correction
-        H: qrcode.ErrorCorrectLevel.H   // ~30% correction
+        L: 1,  // ~7% correction
+        M: 0,  // ~15% correction
+        Q: 3,  // ~25% correction
+        H: 2   // ~30% correction
     };
 
     /**
@@ -60,13 +55,31 @@
      * @param {string} text - Text to encode
      */
     QRCode.prototype.makeCode = function(text) {
+        // Check if qrcode-generator library is loaded
+        if (typeof qrcode === 'undefined') {
+            throw new Error('qrcode-generator library not loaded. Include qrcode-generator.min.js before qr-canvas.js');
+        }
+
         this.options.text = text;
 
         // Determine optimal type number (QR code version) based on text length
         var typeNumber = this._getTypeNumber(text, this.options.correctLevel);
 
+        // Map our error correction levels to qrcode-generator levels
+        var errorCorrectionLevel = this.options.correctLevel;
+        if (typeof qrcode.ErrorCorrectLevel !== 'undefined') {
+            // Use the library's error correction levels
+            var levelMap = {
+                1: qrcode.ErrorCorrectLevel.L,
+                0: qrcode.ErrorCorrectLevel.M,
+                3: qrcode.ErrorCorrectLevel.Q,
+                2: qrcode.ErrorCorrectLevel.H
+            };
+            errorCorrectionLevel = levelMap[this.options.correctLevel] || qrcode.ErrorCorrectLevel.M;
+        }
+
         // Create QR code using qrcode-generator library
-        var qr = qrcode(typeNumber, this.options.correctLevel);
+        var qr = qrcode(typeNumber, errorCorrectionLevel);
         qr.addData(text);
         qr.make();
 
