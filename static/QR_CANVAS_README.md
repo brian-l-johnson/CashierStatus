@@ -7,8 +7,8 @@ This branch replaces the old 614-line `qrcode.js` library with a modern Canvas-b
 ### Replaced
 - **Old:** `static/vendor/qrcode.js` (614 lines, unmaintained)
 - **New:**
-  - `static/vendor/qrcode-generator.min.js` (20KB, maintained, MIT license)
-  - `static/qr-canvas.js` (144 lines, Canvas renderer wrapper)
+  - `static/vendor/qrcode-generator.js` (57KB / 2297 lines, maintained, MIT license)
+  - `static/qr-canvas.js` (~100 lines, Canvas renderer wrapper)
 
 ### Benefits
 - ✅ **Smaller total size:** ~26KB vs ~30KB (old implementation)
