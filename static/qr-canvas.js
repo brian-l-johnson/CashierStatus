@@ -31,7 +31,8 @@
             height: options.height || 256,
             colorDark: options.colorDark || '#000000',
             colorLight: options.colorLight || '#ffffff',
-            correctLevel: options.correctLevel || QRCode.CorrectLevel.M
+            // Use 0 (M level) as default since QRCode.CorrectLevel isn't defined yet
+            correctLevel: (typeof options.correctLevel !== 'undefined') ? options.correctLevel : 0
         };
 
         // Generate and render if text provided
@@ -65,11 +66,8 @@
         // Determine optimal type number (QR code version) based on text length
         var typeNumber = this._getTypeNumber(text);
 
-        // Get error correction level (defaults to M if not set)
+        // Get error correction level (should always be set in constructor)
         var errorCorrectionLevel = this.options.correctLevel;
-        if (typeof errorCorrectionLevel === 'undefined' || errorCorrectionLevel === null) {
-            errorCorrectionLevel = QRCode.CorrectLevel.M; // Default to M (0)
-        }
 
         // Create QR code using qrcode-generator library
         // The library expects numeric values: L=1, M=0, Q=3, H=2
