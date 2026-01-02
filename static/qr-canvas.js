@@ -70,20 +70,9 @@
         // Determine optimal type number (QR code version) based on text length
         var typeNumber = this._getTypeNumber(text);
 
-        // Get error correction level (should always be set in constructor)
-        var errorCorrectionLevel = this.options.correctLevel;
-
-        // Safety check - ensure it's never undefined
-        if (errorCorrectionLevel === undefined || errorCorrectionLevel === null) {
-            console.error('ERROR: errorCorrectionLevel is undefined, using 0');
-            errorCorrectionLevel = 0;
-        }
-
-        console.log('QRCode makeCode - typeNumber:', typeNumber, 'errorCorrectionLevel:', errorCorrectionLevel);
-
-        // Create QR code using qrcode-generator library
-        // The library expects numeric values: L=1, M=0, Q=3, H=2
-        var qr = qrcode(typeNumber, errorCorrectionLevel);
+        // Create QR code - let the library handle defaults
+        // Don't pass errorCorrectionLevel to constructor, set it after
+        var qr = qrcode(typeNumber, 'M');
         qr.addData(text);
         qr.make();
 
