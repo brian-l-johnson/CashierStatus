@@ -20,8 +20,10 @@
             throw new Error('QRCode: Invalid element');
         }
 
-        // Parse options
-        if (typeof options === 'string') {
+        // Parse options - handle undefined/null
+        if (!options) {
+            options = {};
+        } else if (typeof options === 'string') {
             options = { text: options };
         }
 
@@ -31,8 +33,10 @@
             height: options.height || 256,
             colorDark: options.colorDark || '#000000',
             colorLight: options.colorLight || '#ffffff',
-            // Use 0 (M level) as default since QRCode.CorrectLevel isn't defined yet
-            correctLevel: (typeof options.correctLevel !== 'undefined') ? options.correctLevel : 0
+            // Default to 0 (error correction level M)
+            correctLevel: (options.correctLevel !== undefined && options.correctLevel !== null)
+                ? options.correctLevel
+                : 0
         };
 
         // Generate and render if text provided
@@ -68,6 +72,14 @@
 
         // Get error correction level (should always be set in constructor)
         var errorCorrectionLevel = this.options.correctLevel;
+
+        // Safety check - ensure it's never undefined
+        if (errorCorrectionLevel === undefined || errorCorrectionLevel === null) {
+            console.error('ERROR: errorCorrectionLevel is undefined, using 0');
+            errorCorrectionLevel = 0;
+        }
+
+        console.log('QRCode makeCode - typeNumber:', typeNumber, 'errorCorrectionLevel:', errorCorrectionLevel);
 
         // Create QR code using qrcode-generator library
         // The library expects numeric values: L=1, M=0, Q=3, H=2
