@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/models"
@@ -264,7 +265,15 @@ func (h AuthController) Mac(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"status": "error", "message": "failed to bind request"})
 		return
 	}
-	mac := hmac.New(sha256.New, []byte("badbadbad"))
+
+	// Load HMAC secret from environment
+	hmacSecret := os.Getenv("HMAC_SECRET")
+	if hmacSecret == "" {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "server configuration error"})
+		return
+	}
+
+	mac := hmac.New(sha256.New, []byte(hmacSecret))
 	v := macreq.Action + ":" + macreq.Value
 	mac.Write([]byte(v))
 	mv := mac.Sum(nil)
@@ -289,7 +298,15 @@ func (h AuthController) Verify(c *gin.Context) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"status": "error", "message": "failed to bind request"})
 		return
 	}
-	mac := hmac.New(sha256.New, []byte("badbadbad"))
+
+	// Load HMAC secret from environment
+	hmacSecret := os.Getenv("HMAC_SECRET")
+	if hmacSecret == "" {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "server configuration error"})
+		return
+	}
+
+	mac := hmac.New(sha256.New, []byte(hmacSecret))
 	v := verifyreq.Action + ":" + verifyreq.Value
 	mac.Write([]byte(v))
 	mv := mac.Sum(nil)

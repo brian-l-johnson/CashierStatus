@@ -32,7 +32,8 @@ func MakeUser(name string) User {
 }
 
 func (u *User) SetPassword(pw string) {
-	fmt.Printf("setting password to: %v\n", pw)
+	// SECURITY: Do not log passwords
+	// fmt.Printf("setting password to: %v\n", pw)
 	bytes, hasherr := bcrypt.GenerateFromPassword([]byte(pw), 14)
 	if hasherr != nil {
 		panic("unable to hash password")
