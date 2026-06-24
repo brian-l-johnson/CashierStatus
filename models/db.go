@@ -5,8 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
 
-	"gorm.io/driver/sqlite"
+	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -14,8 +15,13 @@ var db *gorm.DB
 
 func Init() {
 	fmt.Println("initing db...")
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "cashierstatus.db"
+	}
+	fmt.Printf("using database at %v\n", dbPath)
 	var err error
-	db, err = gorm.Open(sqlite.Open("cashierstatus.db"), &gorm.Config{})
+	db, err = gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
 	if err != nil {
 		panic("failed to open database file")
 	}
