@@ -322,3 +322,174 @@ func (h AuthController) Verify(c *gin.Context) {
 	}
 
 }
+
+// CreateAPIKey godoc
+//
+// @Summary Create API Key
+// @Description Create a new API key for programmatic access
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param apikey body object true "API Key Data"
+// @Success 200 {object} object
+// @Router /auth/api-keys [post]
+func (a AuthController) CreateAPIKey(c *gin.Context) {
+	db := models.GetDB()
+
+	var req struct {
+		Name    string `json:"name" binding:"required"`
+		Purpose string `json:"purpose" binding:"required"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"status": "error", "message": "invalid request"})
+		return
+	}
+
+	// Validate purpose
+	if req.Purpose != "scanner" && req.Purpose != "ordering" {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"status": "error", "message": "purpose must be 'scanner' or 'ordering'"})
+		return
+	}
+
+	// Generate the API key
+	plaintextKey, apiKey := models.GenerateAPIKey(req.Name, req.Purpose)
+
+	// Save to database
+	result := db.Create(&apiKey)
+	if result.Error != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "failed to create API key"})
+		return
+	}
+
+	// Return the plaintext key (only time it will be visible)
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "API key created successfully. Save this key, it will not be shown again.",
+		"api_key": plaintextKey,
+		"key_id":  apiKey.KeyID,
+		"name":    apiKey.Name,
+		"purpose": apiKey.Purpose,
+	})
+}
+
+// ListAPIKeys godoc
+//
+// @Summary List API Keys
+// @Description List all API keys (keys are hashed, only metadata shown)
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Success 200 {array} object
+// @Router /auth/api-keys [get]
+func (a AuthController) ListAPIKeys(c *gin.Context) {
+	db := models.GetDB()
+
+	var apiKeys []models.APIKey
+	db.Find(&apiKeys)
+
+	// Format response without exposing hashes
+	var response []gin.H
+	for _, key := range apiKeys {
+		response = append(response, gin.H{
+			"key_id":     key.KeyID,
+			"name":       key.Name,
+			"purpose":    key.Purpose,
+			"active":     key.Active,
+			"created_at": key.CreatedAt,
+		})
+	}
+
+	c.IndentedJSON(http.StatusOK, response)
+}
+
+// RevokeAPIKey godoc
+//
+// @Summary Revoke API Key
+// @Description Deactivate an API key
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param key_id path string true "Key ID"
+// @Success 200 {object} object
+// @Router /auth/api-keys/{key_id} [delete]
+func (a AuthController) RevokeAPIKey(c *gin.Context) {
+	db := models.GetDB()
+	keyID := c.Param("key_id")
+
+	var apiKey models.APIKey
+	result := db.First(&apiKey, "key_id = ?", keyID)
+
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"status": "error", "message": "API key not found"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "database error"})
+		return
+	}
+
+	// Mark as inactive instead of deleting (audit trail)
+	apiKey.Active = false
+	result = db.Save(&apiKey)
+
+	if result.Error != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "failed to revoke API key"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"status": "success", "message": "API key revoked"})
+}
+
+// ValidateAPIKey godoc
+//
+// @Summary Validate API Key
+// @Description Check if an API key is valid and active
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param apikey body object true "API Key to validate"
+// @Success 200 {object} object
+// @Router /auth/api-keys/validate [post]
+func (a AuthController) ValidateAPIKey(c *gin.Context) {
+	db := models.GetDB()
+
+	var req struct {
+		APIKey string `json:"api_key" binding:"required"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"status": "error", "message": "invalid request"})
+		return
+	}
+
+	// Find all active API keys
+	var apiKeys []models.APIKey
+	if err := db.Where("active = ?", true).Find(&apiKeys).Error; err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "database error"})
+		return
+	}
+
+	// Check each active key
+	for _, apiKey := range apiKeys {
+		if apiKey.ValidateKey(req.APIKey) {
+			// Valid key found
+			c.IndentedJSON(http.StatusOK, gin.H{
+				"status":  "success",
+				"valid":   true,
+				"message": "API key is valid",
+				"key_id":  apiKey.KeyID,
+				"name":    apiKey.Name,
+				"purpose": apiKey.Purpose,
+			})
+			return
+		}
+	}
+
+	// No matching key found
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"valid":   false,
+		"message": "API key is invalid or has been revoked",
+	})
+}

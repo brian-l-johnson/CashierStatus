@@ -9,6 +9,7 @@ import (
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/controllers"
 	docs "github.com/brian-l-johnson/CashierStatusBoard/v2/docs"
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/middleware"
+	"github.com/brian-l-johnson/CashierStatusBoard/v2/models"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,12 @@ func NewRouter() *gin.Engine {
 	router := gin.New()
 
 	store := cookie.NewStore([]byte(os.Getenv("SESSION_SECRET")))
+	store.Options(sessions.Options{
+		Path:     "/",
+		MaxAge:   86400 * 7, // 7 days
+		HttpOnly: true,
+		SameSite: http.SameSiteStrictMode,
+	})
 	router.Use(sessions.Sessions("session", store))
 
 	router.Use(gin.Logger())
@@ -39,7 +46,8 @@ func NewRouter() *gin.Engine {
 	cashiers := new(controllers.CashierController)
 	router.GET("/cashiers", cashiers.GetCashiers)
 	router.POST("/cashiers", middleware.Authorize("admin"), cashiers.CreateCashier)
-	router.PATCH("/cashiers/:cid", middleware.Authorize("update"), cashiers.UpdateCashier)
+	// PATCH endpoint accepts either session auth OR Bearer token auth for merch-app integration
+	router.PATCH("/cashiers/:cid", middleware.AuthorizeEither(models.GetDB(), "update"), cashiers.UpdateCashier)
 	router.DELETE("/cashiers/:cid", middleware.Authorize("admin"), cashiers.DeleteCashier)
 	router.GET("/cashiers/getupdate-ws", cashiers.GetCashierUpdates)
 
@@ -53,6 +61,12 @@ func NewRouter() *gin.Engine {
 	router.GET("/auth/users", middleware.Authorize("admin"), auth.ListUsers)
 	router.PUT("/auth/users/:uid", middleware.Authorize("admin"), auth.UpdateUser)
 	router.DELETE("/auth/user/:uid", middleware.Authorize("admin"), auth.DeleteUser)
+
+	// API Key management endpoints
+	router.POST("/auth/api-keys", middleware.Authorize("admin"), auth.CreateAPIKey)
+	router.GET("/auth/api-keys", middleware.Authorize("admin"), auth.ListAPIKeys)
+	router.DELETE("/auth/api-keys/:key_id", middleware.Authorize("admin"), auth.RevokeAPIKey)
+	router.POST("/auth/api-keys/validate", auth.ValidateAPIKey) // No auth required - validates the key itself
 
 	docs.SwaggerInfo.BasePath = "/"
 
