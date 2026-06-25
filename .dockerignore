@@ -1,0 +1,22 @@
+# VCS / tooling
+.git
+.gitignore
+.serena
+.DS_Store
+
+# Secrets and local state — never bake into the image
+.env
+*.db
+*.db.old
+
+# Editor/backup and scratch files
+*~
+test.py
+
+# Frontend tooling (committed static assets are already in static/)
+bower.json
+.bowerrc
+
+# Docker
+Dockerfile
+.dockerignore
