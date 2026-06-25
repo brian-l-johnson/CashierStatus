@@ -21,10 +21,19 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
+		// SECURITY: Check if Origin header exists to prevent panic
+		origins, hasOrigin := r.Header["Origin"]
+		if !hasOrigin || len(origins) == 0 {
+			fmt.Println("WebSocket connection rejected: no Origin header")
+			return false
+		}
+
 		allowed := os.Getenv("WEBSOCKET_ALLOWED_ORIGINS")
-		fmt.Printf("current origin is: %v\n", r.Header["Origin"][0])
+		currentOrigin := origins[0]
+		fmt.Printf("current origin is: %v\n", currentOrigin)
+
 		for _, origin := range strings.Split(allowed, `,`) {
-			if origin == r.Header["Origin"][0] {
+			if strings.TrimSpace(origin) == currentOrigin {
 				return true
 			}
 		}

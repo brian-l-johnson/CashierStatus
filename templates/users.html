@@ -2,86 +2,788 @@
     <head>
         <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-        <title>Register</title>
+        <title>Users</title>
         <link href="/static/vendor/bootstrap.min.css" rel="stylesheet" />
         <script src="/static/common.js"></script>
-        <script src="/static/vendor/alpine.js" defer></script>
+        <style>
+            user-list-table {
+                display: block;
+            }
+            user-list-table table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            user-list-table th,
+            user-list-table td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            user-list-table th {
+                background-color: #f8f9fa;
+                font-weight: bold;
+            }
+            user-list-table button {
+                padding: 4px 12px;
+                cursor: pointer;
+            }
+            user-list-table tr.dirty {
+                background-color: #fff3cd;
+                border-left: 4px solid #ffc107;
+            }
+            user-list-table .discard-btn {
+                background-color: #6c757d;
+                color: white;
+                margin-left: 5px;
+            }
+            user-list-table .discard-btn:hover {
+                background-color: #5a6268;
+            }
+            user-list-table .update-user-btn {
+                background-color: #007bff;
+                color: white;
+            }
+            user-list-table .update-user-btn:hover {
+                background-color: #0056b3;
+            }
+            #messages {
+                margin-top: 20px;
+                padding: 10px;
+                border-radius: 4px;
+            }
+            #messages.success {
+                background-color: #d4edda;
+                color: #155724;
+                border: 1px solid #c3e6cb;
+            }
+            #messages.error {
+                background-color: #f8d7da;
+                color: #721c24;
+                border: 1px solid #f5c6cb;
+            }
+            .section-divider {
+                margin: 40px 0;
+                border-top: 2px solid #dee2e6;
+            }
+            api-key-manager {
+                display: block;
+            }
+            api-key-manager table {
+                width: 100%;
+                border-collapse: collapse;
+            }
+            api-key-manager th,
+            api-key-manager td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            api-key-manager th {
+                background-color: #f8f9fa;
+                font-weight: bold;
+            }
+            api-key-manager button {
+                padding: 4px 12px;
+                cursor: pointer;
+            }
+            .api-key-form {
+                margin-bottom: 20px;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 4px;
+            }
+            .api-key-form input,
+            .api-key-form select {
+                padding: 8px;
+                margin-right: 10px;
+                border: 1px solid #ced4da;
+                border-radius: 4px;
+            }
+            .api-key-form button {
+                padding: 8px 16px;
+                background-color: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            .api-key-form button:hover {
+                background-color: #0056b3;
+            }
+            .api-key-display {
+                margin-top: 15px;
+                padding: 15px;
+                background-color: #fff3cd;
+                border: 1px solid #ffc107;
+                border-radius: 4px;
+            }
+            .api-key-display code {
+                display: block;
+                padding: 10px;
+                background-color: #f8f9fa;
+                border: 1px solid #dee2e6;
+                border-radius: 4px;
+                font-family: monospace;
+                word-break: break-all;
+                margin: 10px 0;
+            }
+            .copy-btn {
+                padding: 6px 12px;
+                background-color: #28a745;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-top: 5px;
+            }
+            .copy-btn:hover {
+                background-color: #218838;
+            }
+            .revoke-btn {
+                background-color: #dc3545;
+                color: white;
+            }
+            .revoke-btn:hover {
+                background-color: #c82333;
+            }
+        </style>
     </head>
     <body>
         {{ template "menu.html" . }}
 
         <div class="jumbotron">
-            <div x-data="createDataRetriever()" x-init="getData()">
-                <table>
-                    <tr>
-                        <th>Name</th>
-                        <th>Active</th>
-                        <th>Admin</th>
-                        <th>Update</th>
-                        <th>Viewer</th>
-                    </tr>
-                    <template x-for="user in users" :key="user.UID">
-                        <tr x-data="{ user: user}">
-                            <td><span x-text="user.Name"></span></td>
-                            <td><input type="checkbox" value="true" x-model="user.Active"></td>
-                            <td><input type="checkbox" value="admin" x-model="user.Roles"></td>
-                            <td><input type="checkbox" value="update" x-model="user.Roles"></td>
-                            <td><input type="checkbox" value="view" x-model="user.Roles"></td>
-                            <td><button @click="doUpdate(user)">Update User</button></td>
-                        </tr>
-                    </template>
-                </table>
-            </div>
+            <h2>User Management</h2>
+            <user-list-table api-url="{{getAPIBaseURL}}"></user-list-table>
         </div>
+
+        <div class="section-divider"></div>
+
+        <div class="jumbotron">
+            <h2>API Key Management</h2>
+            <p>Create and manage API keys for programmatic access (e.g., merch-app scanners)</p>
+            <api-key-manager api-url="{{getAPIBaseURL}}"></api-key-manager>
+        </div>
+
         <div id="messages"></div>
+
         <script>
-            async function doUpdate(user) {
-                console.log(user)
-                console.log(user.UID)
-                console.log(user.Roles)
-
-
-                let d = {active: user.Active, roles: user.Roles}
-                
-
-
-                const responseData = await putJson("{{getAPIBaseURL}}/auth/users/"+user.UID, JSON.stringify(d));
-                ele = document.getElementById("messages")
-                if (responseData.status == "success") {
-                    ele.innerText = "Successfully updated "+user.Name
-                } else {
-                    ele.innerText = "Failed to update"+user.Name
+            class UserListTable extends HTMLElement {
+                constructor() {
+                    super();
+                    this.users = [];
+                    this.originalUsers = []; // Store original state for comparison
+                    this.dirtyUsers = new Set(); // Track which users have unsaved changes
+                    this.isLoading = false;
+                    this.apiUrl = '';
+                    this.pollInterval = null;
                 }
 
+                connectedCallback() {
+                    this.apiUrl = this.getAttribute('api-url') || '';
+                    this.render();
+                    this.fetchUsers();
 
-            }
+                    // Poll for updates every 5 seconds (will be paused if there are unsaved changes)
+                    this.pollInterval = setInterval(() => {
+                        this.pollIfNotDirty();
+                    }, 5000);
+                }
 
-
-            function createDataRetriever() {
-                return {
-                    isLoading: false,
-                    users: [],
-                    getData() {
-                        setInterval(() => {
-                            this.isLoading = true;
-                            fetch('{{getAPIBaseURL}}/auth/users')
-                            .then((response) => {
-                                if (response.status === 401) {
-                                    document.location = "{{getAPIBaseURL}}/login.html?from=users.html"
-                                } else {
-                                    return response.json()
-                                }
-                            })
-                            .then((data) => {
-                                this.users = data;
-                                this.isLoading = false;
-                            });
-                        }, 5000)
+                pollIfNotDirty() {
+                    // Only fetch updates if there are no unsaved changes
+                    if (this.dirtyUsers.size === 0) {
+                        this.fetchUsers();
                     }
                 }
+
+                disconnectedCallback() {
+                    if (this.pollInterval) {
+                        clearInterval(this.pollInterval);
+                    }
+                }
+
+                async fetchUsers() {
+                    try {
+                        this.isLoading = true;
+                        const response = await fetch(`${this.apiUrl}/auth/users`);
+
+                        if (response.status === 401) {
+                            document.location = `${this.apiUrl}/login.html?from=users.html`;
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const fetchedUsers = await response.json();
+
+                        // Store original state for comparison
+                        this.originalUsers = JSON.parse(JSON.stringify(fetchedUsers));
+                        this.users = fetchedUsers;
+                        this.isLoading = false;
+                        this.render();
+                    } catch (error) {
+                        console.error('Error fetching users:', error);
+                        this.showMessage(`Error loading users: ${error.message}`, 'error');
+                        this.isLoading = false;
+                    }
+                }
+
+                async updateUser(user) {
+                    try {
+                        const data = {
+                            active: user.Active,
+                            roles: user.Roles
+                        };
+
+                        const response = await putJson(
+                            `${this.apiUrl}/auth/users/${user.UID}`,
+                            JSON.stringify(data)
+                        );
+
+                        if (response.status === "success") {
+                            this.showMessage(`Successfully updated ${user.Name}`, 'success');
+
+                            // Clear dirty state for this user
+                            this.dirtyUsers.delete(user.UID);
+
+                            // Update original state
+                            const originalUser = this.originalUsers.find(u => u.UID === user.UID);
+                            if (originalUser) {
+                                originalUser.Active = user.Active;
+                                originalUser.Roles = [...user.Roles];
+                            }
+
+                            this.render();
+                        } else {
+                            this.showMessage(`Failed to update ${user.Name}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error updating user:', error);
+                        this.showMessage(`Error updating ${user.Name}: ${error.message}`, 'error');
+                    }
+                }
+
+                handleCheckboxChange(userId, field, value) {
+                    const user = this.users.find(u => u.UID === userId);
+                    if (!user) return;
+
+                    if (field === 'Active') {
+                        user.Active = value;
+                    } else {
+                        // Handle role checkboxes
+                        if (!Array.isArray(user.Roles)) {
+                            user.Roles = [];
+                        }
+
+                        if (value) {
+                            // Add role if checked and not already present
+                            if (!user.Roles.includes(field)) {
+                                user.Roles.push(field);
+                            }
+                        } else {
+                            // Remove role if unchecked
+                            user.Roles = user.Roles.filter(r => r !== field);
+                        }
+                    }
+
+                    // Mark user as dirty and re-render
+                    this.markUserDirty(userId);
+                }
+
+                markUserDirty(userId) {
+                    const user = this.users.find(u => u.UID === userId);
+                    const originalUser = this.originalUsers.find(u => u.UID === userId);
+
+                    if (!user || !originalUser) return;
+
+                    // Check if user data differs from original
+                    const rolesChanged = JSON.stringify(user.Roles?.sort()) !== JSON.stringify(originalUser.Roles?.sort());
+                    const activeChanged = user.Active !== originalUser.Active;
+
+                    if (rolesChanged || activeChanged) {
+                        this.dirtyUsers.add(userId);
+                    } else {
+                        this.dirtyUsers.delete(userId);
+                    }
+
+                    this.render();
+                }
+
+                discardUserChanges(userId) {
+                    const user = this.users.find(u => u.UID === userId);
+                    const originalUser = this.originalUsers.find(u => u.UID === userId);
+
+                    if (!user || !originalUser) return;
+
+                    // Restore original values
+                    user.Active = originalUser.Active;
+                    user.Roles = [...(originalUser.Roles || [])];
+
+                    // Clear dirty state
+                    this.dirtyUsers.delete(userId);
+
+                    this.render();
+                }
+
+                showMessage(message, type) {
+                    const messagesDiv = document.getElementById('messages');
+                    if (messagesDiv) {
+                        messagesDiv.innerText = message;
+                        messagesDiv.className = type;
+
+                        // Clear message after 5 seconds
+                        setTimeout(() => {
+                            messagesDiv.innerText = '';
+                            messagesDiv.className = '';
+                        }, 5000);
+                    }
+                }
+
+                render() {
+                    this.innerHTML = `
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Active</th>
+                                    <th>Admin</th>
+                                    <th>Update</th>
+                                    <th>Viewer</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${this.users.length === 0 && !this.isLoading
+                                    ? '<tr><td colspan="6">No users found</td></tr>'
+                                    : this.users.map(user => this.renderUserRow(user)).join('')
+                                }
+                                ${this.isLoading
+                                    ? '<tr><td colspan="6">Loading...</td></tr>'
+                                    : ''
+                                }
+                            </tbody>
+                        </table>
+                    `;
+
+                    // Attach event listeners
+                    this.attachEventListeners();
+                }
+
+                renderUserRow(user) {
+                    const roles = Array.isArray(user.Roles) ? user.Roles : [];
+                    const isDirty = this.dirtyUsers.has(user.UID);
+
+                    return `
+                        <tr data-user-id="${user.UID}" class="${isDirty ? 'dirty' : ''}">
+                            <td>${this.escapeHtml(user.Name)}${isDirty ? ' <span style="color: #ffc107;">●</span>' : ''}</td>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    class="user-checkbox"
+                                    data-field="Active"
+                                    ${user.Active ? 'checked' : ''}
+                                />
+                            </td>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    class="user-checkbox"
+                                    data-field="admin"
+                                    ${roles.includes('admin') ? 'checked' : ''}
+                                />
+                            </td>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    class="user-checkbox"
+                                    data-field="update"
+                                    ${roles.includes('update') ? 'checked' : ''}
+                                />
+                            </td>
+                            <td>
+                                <input
+                                    type="checkbox"
+                                    class="user-checkbox"
+                                    data-field="view"
+                                    ${roles.includes('view') ? 'checked' : ''}
+                                />
+                            </td>
+                            <td>
+                                <button class="update-user-btn">Update User</button>
+                                ${isDirty ? '<button class="discard-btn">Discard</button>' : ''}
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                attachEventListeners() {
+                    // Attach checkbox change listeners
+                    this.querySelectorAll('.user-checkbox').forEach(checkbox => {
+                        checkbox.addEventListener('change', (e) => {
+                            const row = e.target.closest('tr');
+                            const userId = row.dataset.userId;
+                            const field = e.target.dataset.field;
+                            const value = e.target.checked;
+
+                            this.handleCheckboxChange(userId, field, value);
+                        });
+                    });
+
+                    // Attach update button listeners
+                    this.querySelectorAll('.update-user-btn').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const row = e.target.closest('tr');
+                            const userId = row.dataset.userId;
+                            const user = this.users.find(u => u.UID === userId);
+
+                            if (user) {
+                                this.updateUser(user);
+                            }
+                        });
+                    });
+
+                    // Attach discard button listeners
+                    this.querySelectorAll('.discard-btn').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const row = e.target.closest('tr');
+                            const userId = row.dataset.userId;
+
+                            this.discardUserChanges(userId);
+                        });
+                    });
+                }
+
+                escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
             }
+
+            // Register the custom element
+            customElements.define('user-list-table', UserListTable);
+
+            // API Key Manager Component
+            class ApiKeyManager extends HTMLElement {
+                constructor() {
+                    super();
+                    this.apiKeys = [];
+                    this.isLoading = false;
+                    this.apiUrl = '';
+                    this.newKeyData = null;
+                }
+
+                connectedCallback() {
+                    this.apiUrl = this.getAttribute('api-url') || '';
+                    this.render();
+                    this.fetchApiKeys();
+                }
+
+                async fetchApiKeys() {
+                    try {
+                        this.isLoading = true;
+                        const response = await fetch(`${this.apiUrl}/auth/api-keys`);
+
+                        if (response.status === 401) {
+                            document.location = `${this.apiUrl}/login.html?from=users.html`;
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        this.apiKeys = await response.json();
+                        this.isLoading = false;
+                        this.render();
+                    } catch (error) {
+                        console.error('Error fetching API keys:', error);
+                        this.showMessage(`Error loading API keys: ${error.message}`, 'error');
+                        this.isLoading = false;
+                    }
+                }
+
+                async createApiKey(name, purpose) {
+                    try {
+                        const response = await fetch(`${this.apiUrl}/auth/api-keys`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ name, purpose })
+                        });
+
+                        if (response.status === 401) {
+                            document.location = `${this.apiUrl}/login.html?from=users.html`;
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.newKeyData = data;
+                            this.showMessage('API key created successfully! Save it now - it will not be shown again.', 'success');
+                            this.fetchApiKeys();
+                            this.render();
+                        } else {
+                            this.showMessage(`Failed to create API key: ${data.message}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error creating API key:', error);
+                        this.showMessage(`Error creating API key: ${error.message}`, 'error');
+                    }
+                }
+
+                async revokeApiKey(keyId, keyName) {
+                    if (!confirm(`Are you sure you want to revoke API key "${keyName}"? This action cannot be undone.`)) {
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`${this.apiUrl}/auth/api-keys/${keyId}`, {
+                            method: 'DELETE'
+                        });
+
+                        if (response.status === 401) {
+                            document.location = `${this.apiUrl}/login.html?from=users.html`;
+                            return;
+                        }
+
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            this.showMessage(`API key "${keyName}" has been revoked.`, 'success');
+                            this.fetchApiKeys();
+                        } else {
+                            this.showMessage(`Failed to revoke API key: ${data.message}`, 'error');
+                        }
+                    } catch (error) {
+                        console.error('Error revoking API key:', error);
+                        this.showMessage(`Error revoking API key: ${error.message}`, 'error');
+                    }
+                }
+
+                copyToClipboard(text) {
+                    // Try modern Clipboard API first
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(() => {
+                            this.showMessage('API key copied to clipboard!', 'success');
+                        }).catch(err => {
+                            console.error('Clipboard API failed:', err);
+                            // Fall back to legacy method
+                            this.copyToClipboardFallback(text);
+                        });
+                    } else {
+                        // Clipboard API not available, use fallback
+                        this.copyToClipboardFallback(text);
+                    }
+                }
+
+                copyToClipboardFallback(text) {
+                    // Legacy fallback using execCommand
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.top = '0';
+                    textArea.style.left = '0';
+                    textArea.style.width = '2em';
+                    textArea.style.height = '2em';
+                    textArea.style.padding = '0';
+                    textArea.style.border = 'none';
+                    textArea.style.outline = 'none';
+                    textArea.style.boxShadow = 'none';
+                    textArea.style.background = 'transparent';
+                    textArea.style.opacity = '0';
+
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+
+                    try {
+                        const successful = document.execCommand('copy');
+                        if (successful) {
+                            this.showMessage('API key copied to clipboard!', 'success');
+                        } else {
+                            this.showMessage('Failed to copy to clipboard. Please copy manually.', 'error');
+                        }
+                    } catch (err) {
+                        console.error('Fallback copy failed:', err);
+                        this.showMessage('Failed to copy to clipboard. Please copy manually.', 'error');
+                    } finally {
+                        document.body.removeChild(textArea);
+                    }
+                }
+
+                showMessage(message, type) {
+                    const messagesDiv = document.getElementById('messages');
+                    if (messagesDiv) {
+                        messagesDiv.innerText = message;
+                        messagesDiv.className = type;
+
+                        setTimeout(() => {
+                            messagesDiv.innerText = '';
+                            messagesDiv.className = '';
+                        }, 5000);
+                    }
+                }
+
+                render() {
+                    this.innerHTML = `
+                        <div class="api-key-form">
+                            <h4>Create New API Key</h4>
+                            <div>
+                                <input
+                                    type="text"
+                                    id="api-key-name"
+                                    placeholder="Name (e.g., scanner-pi-1)"
+                                    style="width: 250px;"
+                                />
+                                <select id="api-key-purpose">
+                                    <option value="scanner">Scanner</option>
+                                    <option value="ordering">Ordering</option>
+                                </select>
+                                <button id="create-api-key-btn">Create API Key</button>
+                            </div>
+                            ${this.newKeyData ? this.renderNewKeyDisplay() : ''}
+                        </div>
+
+                        <h4>Existing API Keys</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Purpose</th>
+                                    <th>Key ID</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${this.apiKeys.length === 0 && !this.isLoading
+                                    ? '<tr><td colspan="6">No API keys found</td></tr>'
+                                    : this.apiKeys.map(key => this.renderApiKeyRow(key)).join('')
+                                }
+                                ${this.isLoading
+                                    ? '<tr><td colspan="6">Loading...</td></tr>'
+                                    : ''
+                                }
+                            </tbody>
+                        </table>
+                    `;
+
+                    this.attachEventListeners();
+                }
+
+                renderNewKeyDisplay() {
+                    return `
+                        <div class="api-key-display">
+                            <strong>⚠️ API Key Created - Save this now!</strong>
+                            <p>This key will only be shown once. Copy it and store it securely.</p>
+                            <div>
+                                <strong>Name:</strong> ${this.escapeHtml(this.newKeyData.name)}<br/>
+                                <strong>Purpose:</strong> ${this.escapeHtml(this.newKeyData.purpose)}<br/>
+                                <strong>Key ID:</strong> ${this.escapeHtml(this.newKeyData.key_id)}
+                            </div>
+                            <code id="new-api-key">${this.escapeHtml(this.newKeyData.api_key)}</code>
+                            <button class="copy-btn" id="copy-new-key-btn">Copy to Clipboard</button>
+                            <button id="dismiss-new-key-btn" style="margin-left: 10px;">Dismiss</button>
+                        </div>
+                    `;
+                }
+
+                renderApiKeyRow(key) {
+                    const createdDate = new Date(key.created_at).toLocaleString();
+                    const statusBadge = key.active
+                        ? '<span style="color: green;">●</span> Active'
+                        : '<span style="color: red;">●</span> Revoked';
+
+                    return `
+                        <tr data-key-id="${key.key_id}">
+                            <td>${this.escapeHtml(key.name)}</td>
+                            <td>${this.escapeHtml(key.purpose)}</td>
+                            <td><code>${this.escapeHtml(key.key_id)}</code></td>
+                            <td>${statusBadge}</td>
+                            <td>${createdDate}</td>
+                            <td>
+                                ${key.active
+                                    ? `<button class="revoke-api-key-btn revoke-btn" data-key-name="${this.escapeHtml(key.name)}">Revoke</button>`
+                                    : '<span style="color: #999;">Already revoked</span>'
+                                }
+                            </td>
+                        </tr>
+                    `;
+                }
+
+                attachEventListeners() {
+                    // Create API key button
+                    const createBtn = this.querySelector('#create-api-key-btn');
+                    if (createBtn) {
+                        createBtn.addEventListener('click', () => {
+                            const nameInput = this.querySelector('#api-key-name');
+                            const purposeSelect = this.querySelector('#api-key-purpose');
+
+                            const name = nameInput.value.trim();
+                            const purpose = purposeSelect.value;
+
+                            if (!name) {
+                                this.showMessage('Please enter a name for the API key', 'error');
+                                return;
+                            }
+
+                            this.createApiKey(name, purpose);
+                            nameInput.value = '';
+                        });
+                    }
+
+                    // Copy new key button
+                    const copyBtn = this.querySelector('#copy-new-key-btn');
+                    if (copyBtn && this.newKeyData) {
+                        copyBtn.addEventListener('click', () => {
+                            this.copyToClipboard(this.newKeyData.api_key);
+                        });
+                    }
+
+                    // Dismiss new key display
+                    const dismissBtn = this.querySelector('#dismiss-new-key-btn');
+                    if (dismissBtn) {
+                        dismissBtn.addEventListener('click', () => {
+                            this.newKeyData = null;
+                            this.render();
+                        });
+                    }
+
+                    // Revoke buttons
+                    this.querySelectorAll('.revoke-api-key-btn').forEach(button => {
+                        button.addEventListener('click', (e) => {
+                            const row = e.target.closest('tr');
+                            const keyId = row.dataset.keyId;
+                            const keyName = e.target.dataset.keyName;
+
+                            this.revokeApiKey(keyId, keyName);
+                        });
+                    });
+                }
+
+                escapeHtml(text) {
+                    const div = document.createElement('div');
+                    div.textContent = text;
+                    return div.innerHTML;
+                }
+            }
+
+            // Register the API key manager component
+            customElements.define('api-key-manager', ApiKeyManager);
         </script>
-
-
     </body>
 </html>
