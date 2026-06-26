@@ -3,43 +3,18 @@ package controllers
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
-	"os"
 	"strconv"
-	"strings"
 	"sync"
+	"time"
 
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/models"
 	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 )
 
 type CashierController struct{}
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		// SECURITY: Check if Origin header exists to prevent panic
-		origins, hasOrigin := r.Header["Origin"]
-		if !hasOrigin || len(origins) == 0 {
-			fmt.Println("WebSocket connection rejected: no Origin header")
-			return false
-		}
-
-		allowed := os.Getenv("WEBSOCKET_ALLOWED_ORIGINS")
-		currentOrigin := origins[0]
-		fmt.Printf("current origin is: %v\n", currentOrigin)
-
-		for _, origin := range strings.Split(allowed, `,`) {
-			if strings.TrimSpace(origin) == currentOrigin {
-				return true
-			}
-		}
-		return false
-	},
-}
 
 var mutex = &sync.Mutex{}
 
@@ -49,7 +24,9 @@ type Message struct {
 	Serving string `json:"serving"`
 }
 
-var clients = make(map[*websocket.Conn]bool)
+// clients holds one buffered channel per connected SSE client. The broadcaster
+// sends each update to every channel.
+var clients = make(map[chan Message]bool)
 
 // &@BasePath	/
 
@@ -145,16 +122,17 @@ func (h CashierController) UpdateCashier(c *gin.Context) {
 		} else {
 			msg := Message{Type: "update", Cashier: strconv.FormatUint(uint64(cashier.ID), 10), Serving: cashier.Serving}
 
+			mutex.Lock()
 			for client := range clients {
-				err := client.WriteJSON(msg)
-				if err != nil {
-					fmt.Println(err)
-					mutex.Lock()
-					client.Close()
-					delete(clients, client)
-					mutex.Unlock()
+				// Non-blocking send: skip clients whose buffer is full so a
+				// slow consumer can't stall the broadcast.
+				select {
+				case client <- msg:
+				default:
+					fmt.Println("dropping update for slow SSE client")
 				}
 			}
+			mutex.Unlock()
 			c.IndentedJSON(http.StatusOK, gin.H{"status": "success", "message": "cashier updates"})
 		}
 	}
@@ -193,27 +171,41 @@ func (h CashierController) DeleteCashier(c *gin.Context) {
 
 }
 func (h CashierController) GetCashierUpdates(c *gin.Context) {
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
-	if err != nil {
-		fmt.Println(err)
-		c.JSON(http.StatusInternalServerError, gin.H{"status": "Error", "message": err.Error})
-		return
-	} else {
-		defer conn.Close()
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+
+	messageChan := make(chan Message, 16)
+	mutex.Lock()
+	clients[messageChan] = true
+	mutex.Unlock()
+
+	defer func() {
 		mutex.Lock()
-		clients[conn] = true
+		delete(clients, messageChan)
 		mutex.Unlock()
-		for {
-			var msg string
-			err := conn.ReadJSON(msg)
-			if err != nil {
-				fmt.Println(err)
-				mutex.Lock()
-				delete(clients, conn)
-				mutex.Unlock()
-				return
+		close(messageChan)
+	}()
+
+	// Heartbeat keeps the connection alive through idle-timeout proxies and
+	// lets a dead connection surface quickly. SSE comments (": ...") are
+	// ignored by EventSource, so no client handling is needed.
+	heartbeat := time.NewTicker(20 * time.Second)
+	defer heartbeat.Stop()
+
+	c.Stream(func(w io.Writer) bool {
+		select {
+		case msg, ok := <-messageChan:
+			if !ok {
+				return false
 			}
-			fmt.Println("got message from clinet:" + msg)
+			c.SSEvent("message", msg)
+			return true
+		case <-heartbeat.C:
+			fmt.Fprint(w, ": ping\n\n")
+			return true
+		case <-c.Request.Context().Done():
+			return false
 		}
-	}
+	})
 }
