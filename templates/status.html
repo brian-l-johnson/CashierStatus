@@ -3,7 +3,7 @@
         <link href="static/common.css" rel="stylesheet" />
         <script>
             const WEB_SOCKET_HOST = window.location.host;
-            const WEB_SOCKET_PROTOCOL = "ws://";
+            const WEB_SOCKET_PROTOCOL = window.location.protocol === "https:" ? "wss://" : "ws://";
             const WEB_SOCKET_PATH = "/cashiers/getupdate-ws";
 
             function createCashier(num, serving) {
