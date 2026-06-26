@@ -49,7 +49,7 @@ func (h HealthController) Status(c *gin.Context) {
 		UptimeSeconds:    int64(time.Since(startTime).Seconds()),
 		Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		CashierCount:     cashierCount,
-		ActiveWebsockets: len(clients), // WebSocket clients from cashiers.go
+		ActiveWebsockets: len(clients), // connected SSE clients from cashiers.go
 	}
 
 	c.JSON(http.StatusOK, response)

@@ -49,7 +49,7 @@ func NewRouter() *gin.Engine {
 	// PATCH endpoint accepts either session auth OR Bearer token auth for merch-app integration
 	router.PATCH("/cashiers/:cid", middleware.AuthorizeEither(models.GetDB(), "update"), cashiers.UpdateCashier)
 	router.DELETE("/cashiers/:cid", middleware.Authorize("admin"), cashiers.DeleteCashier)
-	router.GET("/cashiers/getupdate-ws", cashiers.GetCashierUpdates)
+	router.GET("/cashiers/getupdate-sse", cashiers.GetCashierUpdates)
 
 	auth := new(controllers.AuthController)
 	router.POST("/auth/mac", middleware.Authorize("update"), auth.Mac)

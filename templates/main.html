@@ -2,9 +2,7 @@
     <head>
         <link href="static/common.css" rel="stylesheet" />
         <script>
-            const WEB_SOCKET_HOST = window.location.host;
-            const WEB_SOCKET_PROTOCOL = "ws://";
-            const WEB_SOCKET_PATH = "/cashiers/getupdate-ws";
+            const UPDATES_PATH = "/cashiers/getupdate-sse";
 
             function createCashier(num, serving) {
                 newCashier = document.createElement("div");
@@ -37,6 +35,10 @@
                         throw new Error("Failed to make request for cashier")
                     } else {
                         const data = await response.json();
+                        // Rebuild from authoritative server state so this is
+                        // safe to call on every (re)connect without duplicating
+                        // rows.
+                        document.getElementById("cashier-container").replaceChildren();
                         data.forEach(function(c) {
                             createCashier(c.ID, c.Serving);
                         })
@@ -48,8 +50,8 @@
 
             function subscribeToUpdates() {
                 //logMessage("connecting to server...", "status");
-                const updatesSocket = new WebSocket(WEB_SOCKET_PROTOCOL+WEB_SOCKET_HOST+WEB_SOCKET_PATH);
-                updatesSocket.onmessage = function(event) {
+                const updatesSource = new EventSource(UPDATES_PATH);
+                updatesSource.onmessage = function(event) {
                     console.log(event.data);
                     data = JSON.parse(event.data);
                     switch (data.type) {
@@ -57,20 +59,19 @@
                             updateCashierServing(data['cashier'], data['serving']);
                             break;
                         default:
-                            consoleç.log("unandled type");
+                            console.log("unandled type");
                             break;
                     }
                 }
-                updatesSocket.onclose = function(event) {
-                    console.log("websocket closed");
-                    logMessage("lost connection to server!", "error");
-                    setTimeout(function() { subscribeToUpdates()}, 1000);
+                updatesSource.onerror = function(event) {
+                    // EventSource reconnects automatically; just surface the state.
+                    logMessage("lost connection to server, reconnecting...", "error");
                 }
-                updatesSocket.onerror = function(event) {
-                    logMessage("websocket error!", "error");
-                }
-                updatesSocket.onopen = function(event) {
-                    logMessage("websocket connected!", "status");
+                updatesSource.onopen = function(event) {
+                    logMessage("connected!", "status");
+                    // Resync on every connect. On reconnect this recovers any
+                    // updates missed while the connection was down.
+                    getCashierList();
                 }
             }
             function markCashierClosed(id) {
@@ -126,7 +127,7 @@
                 subscribeToUpdates();
             }
 
-            window.onLoad = startUp();
+            window.addEventListener("load", startUp);
             window.addEventListener("keydown", checkKeyPressed, false);
 
         </script>
