@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # --- Build stage ---
-FROM golang:1.22 AS build
+FROM golang:1.24 AS build
 WORKDIR /src
 
 # Cache module downloads as their own layer.
