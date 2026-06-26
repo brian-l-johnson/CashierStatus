@@ -1,0 +1,13 @@
+{
+  "name": "bootstrap.min",
+  "_cacheHeaders": {
+    "ETag": "W/\"29162db0d0e132f7bf3df9620ed00a52\"",
+    "Content-Type": "text/html; charset=utf-8"
+  },
+  "_release": "e-tag:W/\"29162db",
+  "main": "index.css",
+  "_source": "https://github.com/twbs/bootstrap/blob/v5.3.3/dist/css/bootstrap.min.css",
+  "_target": "*",
+  "_originalSource": "https://github.com/twbs/bootstrap/blob/v5.3.3/dist/css/bootstrap.min.css",
+  "_direct": true
+}
