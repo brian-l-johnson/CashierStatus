@@ -54,6 +54,7 @@ func NewRouter() *gin.Engine {
 	auth := new(controllers.AuthController)
 	router.POST("/auth/mac", middleware.Authorize("update"), auth.Mac)
 	router.POST("/auth/verify", middleware.Authorize("view"), auth.Verify)
+	router.POST("/auth/sign-control", middleware.Authorize("admin"), auth.SignControl)
 	router.POST("/auth/login", auth.Login)
 	router.GET("/auth/logout", auth.Logout)
 	router.GET("/auth/status", auth.Status)

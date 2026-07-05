@@ -7,14 +7,24 @@
         <script type="text/javascript" src="/static/qr-canvas.js"></script>
         <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
         <script>
-            function generateCode() {
+            async function generateCode() {
                 clearQRCode();
-                let data = {};
-                data["station"] = document.forms.qrdata['station'].value;
-                data["control"] = "setup-station";
-                const encdata = JSON.stringify(data);
-                let qrcode = new QRCode(document.getElementById("qrcode"), encdata);
-                document.getElementById("datajson").innerText = encdata;
+                const station = document.forms.qrdata['station'].value;
+                const resp = await fetch('/auth/sign-control', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({control: 'setup-station', station: station}),
+                });
+                if (!resp.ok) {
+                    const body = await resp.json().catch(() => ({}));
+                    document.getElementById("datajson").innerText =
+                        "Error: " + (body.message || resp.status);
+                    return;
+                }
+                const data = await resp.json();
+                new QRCode(document.getElementById("qrcode"), data.qr);
+                document.getElementById("datajson").innerText =
+                    data.payload + " (expires " + new Date(data.exp * 1000).toLocaleString() + ")";
             }
 
             function clearQRCode() {
@@ -29,7 +39,7 @@
             <form onsubmit="return false;" name="qrdata">
                 <div class="form-group">
                     <label for="orderid">Cashier Station</label>
-                    <input type="text" class="form-control" name="staion" id="station" placeholder="enter order station id">
+                    <input type="text" class="form-control" name="station" id="station" placeholder="enter order station id">
                 </div>
                 <button class="btn btn-primary" onclick="generateCode()">Generate</button>
             </form>

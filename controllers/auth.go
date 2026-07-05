@@ -1,14 +1,18 @@
 package controllers
 
 import (
+	"crypto/ed25519"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
+	"time"
 
 	"github.com/brian-l-johnson/CashierStatusBoard/v2/models"
 	"github.com/gin-contrib/sessions"
@@ -18,6 +22,9 @@ import (
 )
 
 type AuthController struct{}
+
+// stationRE matches merch-app's alphanum-max-20 station ID rule.
+var stationRE = regexp.MustCompile(`^[a-zA-Z0-9]{1,20}$`)
 
 // &@BasePath	/
 
@@ -321,6 +328,77 @@ func (h AuthController) Verify(c *gin.Context) {
 		c.IndentedJSON(http.StatusOK, gin.H{"status": "succes", "result": false})
 	}
 
+}
+
+// SignControl godoc
+//
+//	@Summary		Sign a control QR payload
+//	@Schemes
+//	@Description	Ed25519-sign a control command (e.g. setup-station) so cashier stations can verify it came from this server
+//	@Tags			Auth
+//	@Accept			json
+//	@Produce		json
+//	@Param			signcontrol	body		models.SignControlReq	true	"control command data"
+//	@Success		200			{object}	object
+//	@Router			/auth/sign-control [post]
+func (a AuthController) SignControl(c *gin.Context) {
+	seedB64 := os.Getenv("CONTROL_SIGNING_KEY")
+	if seedB64 == "" {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "CONTROL_SIGNING_KEY not configured"})
+		return
+	}
+	seed, err := base64.StdEncoding.DecodeString(seedB64)
+	if err != nil || len(seed) != ed25519.SeedSize {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "CONTROL_SIGNING_KEY is malformed"})
+		return
+	}
+	priv := ed25519.NewKeyFromSeed(seed)
+
+	var req models.SignControlReq
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "invalid request"})
+		return
+	}
+
+	// Whitelist of signable control commands; extend deliberately.
+	if req.Control != "setup-station" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "control command not signable"})
+		return
+	}
+	if !stationRE.MatchString(req.Station) {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "invalid station id"})
+		return
+	}
+
+	ttl := 24 * time.Hour
+	if v := os.Getenv("CONTROL_QR_TTL"); v != "" {
+		if parsed, err := time.ParseDuration(v); err == nil {
+			ttl = parsed
+		}
+	}
+	exp := time.Now().Add(ttl).Unix()
+
+	payload, err := json.Marshal(map[string]interface{}{
+		"control": req.Control,
+		"station": req.Station,
+		"exp":     exp,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "failed to build payload"})
+		return
+	}
+
+	sig := ed25519.Sign(priv, payload)
+	envelope, err := json.Marshal(map[string]string{
+		"c": base64.StdEncoding.EncodeToString(payload),
+		"s": base64.StdEncoding.EncodeToString(sig),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "failed to build envelope"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "qr": string(envelope), "payload": string(payload), "exp": exp})
 }
 
 // CreateAPIKey godoc
