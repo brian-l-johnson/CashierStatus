@@ -1,0 +1,183 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Manage Cashiers</title>
+        <link href="/static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <style>
+            #results {
+                margin-top: 20px;
+            }
+            #results .log-line {
+                padding: 2px 0;
+            }
+            #results .log-error {
+                color: #c82333;
+            }
+            #results .log-skip {
+                color: #6c757d;
+            }
+            #results .log-success {
+                color: #218838;
+            }
+            .section-divider {
+                margin: 40px 0;
+                border-top: 2px solid #dee2e6;
+            }
+            #cashier-table th,
+            #cashier-table td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            #cashier-table th {
+                background-color: #f8f9fa;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        {{ template "menu.html" . }}
+        <div class="container-fluid">
+            <h2>Create Cashiers</h2>
+            <p>Creates cashiers numbered 1 through the count below. Existing cashier numbers are left untouched, so this is safe to re-run after raising the count.</p>
+            <form onsubmit="return false;" name="createcashiers">
+                <div class="form-group">
+                    <label for="cashier-count">Number of Cashiers</label>
+                    <input type="number" class="form-control" name="cashier-count" id="cashier-count" min="1" step="1" placeholder="e.g. 25" style="max-width: 200px;">
+                </div>
+                <button class="btn btn-primary" id="create-btn" onclick="createCashiers()">Create</button>
+            </form>
+            <div id="results"></div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="container-fluid">
+            <h2>Existing Cashiers</h2>
+            <table id="cashier-table">
+                <thead>
+                    <tr>
+                        <th>Cashier</th>
+                        <th>Currently Serving</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="cashier-table-body">
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            function logLine(message, cssClass) {
+                const results = document.getElementById("results");
+                const line = document.createElement("div");
+                line.className = "log-line " + (cssClass || "");
+                line.innerText = message;
+                results.appendChild(line);
+            }
+
+            function escapeHtml(text) {
+                const div = document.createElement("div");
+                div.textContent = text;
+                return div.innerHTML;
+            }
+
+            async function loadCashierTable() {
+                const tbody = document.getElementById("cashier-table-body");
+                try {
+                    const response = await fetch("/cashiers");
+                    if (!response.ok) {
+                        throw new Error("request failed (" + response.status + ")");
+                    }
+                    const cashiers = await response.json();
+                    cashiers.sort((a, b) => a.ID - b.ID);
+
+                    tbody.innerHTML = cashiers.length === 0
+                        ? '<tr><td colspan="3">No cashiers yet</td></tr>'
+                        : cashiers.map(c => `
+                            <tr data-cashier-id="${c.ID}">
+                                <td>Cashier ${c.ID}</td>
+                                <td>${c.Serving ? escapeHtml(c.Serving) : "closed"}</td>
+                                <td><button class="btn btn-sm btn-danger delete-cashier-btn">Delete</button></td>
+                            </tr>
+                        `).join("");
+
+                    tbody.querySelectorAll(".delete-cashier-btn").forEach(button => {
+                        button.addEventListener("click", (e) => {
+                            const row = e.target.closest("tr");
+                            deleteCashier(row.dataset.cashierId);
+                        });
+                    });
+                } catch (error) {
+                    tbody.innerHTML = '<tr><td colspan="3">Error loading cashiers: ' + escapeHtml(error.message) + '</td></tr>';
+                }
+            }
+
+            async function deleteCashier(id) {
+                if (!confirm("Delete Cashier " + id + "? This cannot be undone.")) {
+                    return;
+                }
+                try {
+                    const response = await fetch("/cashiers/" + id, {
+                        method: "DELETE",
+                        credentials: "same-origin"
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || data.status === "error") {
+                        logLine("Cashier " + id + ": " + (data.message || "delete failed"), "log-error");
+                    } else {
+                        logLine("Cashier " + id + ": deleted", "log-success");
+                    }
+                } catch (error) {
+                    logLine("Cashier " + id + ": " + error.message, "log-error");
+                }
+                loadCashierTable();
+            }
+
+            async function createCashiers() {
+                const countInput = document.getElementById("cashier-count");
+                const count = parseInt(countInput.value, 10);
+                if (!Number.isInteger(count) || count < 1) {
+                    document.getElementById("results").innerHTML = "";
+                    logLine("Enter a number of cashiers of 1 or more.", "log-error");
+                    return;
+                }
+
+                const createBtn = document.getElementById("create-btn");
+                createBtn.disabled = true;
+                document.getElementById("results").innerHTML = "";
+
+                for (let id = 1; id <= count; id++) {
+                    try {
+                        const response = await fetch("/cashiers", {
+                            method: "POST",
+                            credentials: "same-origin",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ ID: id })
+                        });
+                        const data = await response.json().catch(() => ({}));
+
+                        if (!response.ok) {
+                            logLine("Cashier " + id + ": request failed (" + response.status + ")", "log-error");
+                        } else if (data.message === "cashier already exists") {
+                            logLine("Cashier " + id + ": already exists, skipped", "log-skip");
+                        } else if (data.status === "success") {
+                            logLine("Cashier " + id + ": created", "log-success");
+                        } else {
+                            logLine("Cashier " + id + ": " + (data.message || "unknown response"), "log-error");
+                        }
+                    } catch (error) {
+                        logLine("Cashier " + id + ": " + error.message, "log-error");
+                    }
+                }
+
+                createBtn.disabled = false;
+                logLine("Done.");
+                loadCashierTable();
+            }
+
+            window.addEventListener("load", loadCashierTable);
+        </script>
+    </body>
+</html>

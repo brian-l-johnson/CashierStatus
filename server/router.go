@@ -90,7 +90,7 @@ func NewRouter() *gin.Engine {
 	router.GET("/status", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "status.html", gin.H{})
 	})
-	router.GET("/update", middleware.Authorize("update"), func(c *gin.Context) {
+	router.GET("/update", middleware.AuthorizeHTML("update"), func(c *gin.Context) {
 		session := sessions.Default(c)
 		user := session.Get("user")
 		roles := session.Get("roles")
@@ -117,11 +117,17 @@ func NewRouter() *gin.Engine {
 		c.HTML(http.StatusOK, "ordertester2.html", gin.H{"title": "QRTester2", "user": user, "roles": roles})
 	})
 
-	router.GET("/cashiersetup", middleware.Authorize("admin"), func(c *gin.Context) {
+	router.GET("/cashiersetup", middleware.AuthorizeHTML("admin"), func(c *gin.Context) {
 		session := sessions.Default(c)
 		user := session.Get("user")
 		roles := session.Get("roles")
 		c.HTML(http.StatusOK, "cashiersetup.html", gin.H{"title": "Cashier Setup", "user": user, "roles": roles})
+	})
+	router.GET("/cashiers/create", middleware.AuthorizeHTML("admin"), func(c *gin.Context) {
+		session := sessions.Default(c)
+		user := session.Get("user")
+		roles := session.Get("roles")
+		c.HTML(http.StatusOK, "cashierscreate.html", gin.H{"title": "Manage Cashiers", "user": user, "roles": roles})
 	})
 	router.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", gin.H{"title": "Login"})
@@ -129,7 +135,7 @@ func NewRouter() *gin.Engine {
 	router.GET("/register", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "register.html", gin.H{"title": "register"})
 	})
-	router.GET("/users", middleware.Authorize("admin"), func(c *gin.Context) {
+	router.GET("/users", middleware.AuthorizeHTML("admin"), func(c *gin.Context) {
 		session := sessions.Default(c)
 		user := session.Get("user")
 		roles := session.Get("roles")

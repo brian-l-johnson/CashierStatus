@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -370,10 +371,19 @@ func (a AuthController) SignControl(c *gin.Context) {
 		return
 	}
 
+	// Signed setup QRs expire after this TTL. Default 24h: long enough to
+	// pre-generate QRs for a full conference day, at the cost of a 24h
+	// replay window for a photographed QR (accepted risk - see merch-app
+	// TESTING.md D2). Override with CONTROL_QR_TTL as a Go duration string,
+	// e.g. CONTROL_QR_TTL=1h or CONTROL_QR_TTL=15m. Scanner stations check
+	// expiry against their local clock, so very short TTLs need the Pis'
+	// clocks in sync (they may drift after a cold boot with no NTP).
 	ttl := 24 * time.Hour
 	if v := os.Getenv("CONTROL_QR_TTL"); v != "" {
 		if parsed, err := time.ParseDuration(v); err == nil {
 			ttl = parsed
+		} else {
+			log.Printf("WARNING: invalid CONTROL_QR_TTL %q (want a Go duration like \"1h\" or \"15m\"); using default 24h", v)
 		}
 	}
 	exp := time.Now().Add(ttl).Unix()

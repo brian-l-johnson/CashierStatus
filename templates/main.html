@@ -38,7 +38,10 @@
                         // Rebuild from authoritative server state so this is
                         // safe to call on every (re)connect without duplicating
                         // rows.
-                        document.getElementById("cashier-container").replaceChildren();
+                        const containerEle = document.getElementById("cashier-container");
+                        containerEle.replaceChildren();
+                        const cols = Math.max(1, Math.ceil(Math.sqrt(data.length)));
+                        containerEle.style.setProperty("--cols", cols);
                         data.forEach(function(c) {
                             createCashier(c.ID, c.Serving);
                         })
@@ -104,7 +107,6 @@
             function updateCashierServing(id, serving) {
                 const containerEle = document.getElementById("cashier-"+id);
                 var newEle = containerEle.cloneNode(true)
-                newEle.style.background = "#FFAC11";
                 newEle.classList.add('updatedCashier');
                 newEle.classList.remove("closed");
                 containerEle.parentElement.replaceChild(newEle, containerEle)

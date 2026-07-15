@@ -5,8 +5,30 @@
         <title>Register</title>
         <link href="static/vendor/bootstrap.min.css" rel="stylesheet" />
         <script src="static/common.js"></script>
+        <style>
+            body {
+                display: flex;
+                align-items: center;
+                min-height: 100vh;
+                background-color: #f5f5f5;
+            }
+            .form-signin {
+                max-width: 350px;
+                padding: 1rem;
+            }
+            .form-signin .form-floating:first-of-type input {
+                border-bottom-right-radius: 0;
+                border-bottom-left-radius: 0;
+            }
+            .form-signin .form-floating:last-of-type input {
+                margin-top: -1px;
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+                margin-bottom: 1rem;
+            }
+        </style>
     </head>
-    <body>
+    <body class="container-fluid">
     <main class="form-signin w-100 m-auto">
             <form id="registerForm" action="" name="register" onsubmit="doRegister(event)">
                 <h1 class ="h4 mb-3 fw-normal">Register A New Account</h1>
@@ -22,6 +44,9 @@
                 </div>
                 <button class="btn btn-primary w-100 py-2" type="submit">Register</button>
             </form>
+            <div class="container">
+                <a href="/login">Back to sign in</a>
+            </div>
         </main>
         <script>
             async function doRegister(event) {

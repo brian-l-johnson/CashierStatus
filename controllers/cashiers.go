@@ -83,7 +83,7 @@ func (h CashierController) CreateCashier(c *gin.Context) {
 			}
 		}
 	} else {
-		c.IndentedJSON(http.StatusOK, gin.H{"staus": "error", "message": "cashier already exists"})
+		c.IndentedJSON(http.StatusOK, gin.H{"status": "error", "message": "cashier already exists"})
 	}
 }
 
@@ -150,7 +150,7 @@ func (h CashierController) UpdateCashier(c *gin.Context) {
 func (h CashierController) DeleteCashier(c *gin.Context) {
 	db := models.GetDB()
 	var cashier models.Cashier
-	result := db.First(&cashier, "ID=?", c.Param("tid"))
+	result := db.First(&cashier, "ID=?", c.Param("cid"))
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
 			c.IndentedJSON(http.StatusOK, gin.H{"status": "error", "message": "cashier not found"})

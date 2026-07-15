@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"net/http"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -27,7 +28,8 @@ func AuthorizeHTML(role string) gin.HandlerFunc {
 				return
 			}
 		} else {
-			c.Redirect(http.StatusFound, os.Getenv("API_BASE_URL")+"/login.html")
+			from := url.QueryEscape(c.Request.URL.RequestURI())
+			c.Redirect(http.StatusFound, os.Getenv("API_BASE_URL")+"/login?from="+from)
 			c.Abort()
 			return
 		}
