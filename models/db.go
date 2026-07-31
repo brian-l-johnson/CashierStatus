@@ -21,11 +21,15 @@ func Init() {
 	}
 	fmt.Printf("using database at %v\n", dbPath)
 	var err error
-	// WAL instead of the default rollback journal: readers no longer block on
-	// the in-flight writer, which matters because every cashier board and info
-	// board polls this server on a timer. Measured on a read-heavy mix, read
-	// p95 drops from ~78ms to ~2ms and sustained contention stops producing
-	// SQLITE_BUSY. The driver already applies busy_timeout(5000) on its own.
+	// WAL instead of the default rollback journal, so readers do not block on
+	// the in-flight writer. Steady-state read load is light -- cashier boards
+	// get updates pushed over SSE and only read /cashiers on (re)connect, and
+	// info boards poll /notes once a minute. The case this actually buys us is
+	// the burst: when the server restarts or the network blips, every board
+	// reconnects and re-reads /cashiers at the same moment, which is also when
+	// cashier updates are most likely to be writing. Under a rollback journal
+	// those reads serialize behind the writer. Headroom, not a fix for
+	// anything observed. The driver already sets busy_timeout(5000) itself.
 	//
 	// This puts -wal and -shm files next to the database, so DB_PATH must be
 	// local disk -- WAL needs real shared memory and does not work over NFS.
