@@ -1,0 +1,442 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Info Board</title>
+        <link href="/static/vendor/bootstrap.min.css" rel="stylesheet" />
+        <style>
+            #results {
+                margin-top: 20px;
+            }
+            #results .log-line {
+                padding: 2px 0;
+            }
+            #results .log-error {
+                color: #c82333;
+            }
+            #results .log-skip {
+                color: #6c757d;
+            }
+            #results .log-success {
+                color: #218838;
+            }
+            .section-divider {
+                margin: 40px 0;
+                border-top: 2px solid #dee2e6;
+            }
+            #note-table {
+                width: 100%;
+            }
+            #note-table th,
+            #note-table td {
+                padding: 8px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+                vertical-align: middle;
+            }
+            #note-table th {
+                background-color: #f8f9fa;
+                font-weight: bold;
+            }
+            #note-table .thumb {
+                max-width: 120px;
+                max-height: 70px;
+                object-fit: contain;
+            }
+            #note-table tr.inactive td {
+                color: #6c757d;
+            }
+            .note-form {
+                max-width: 700px;
+            }
+            #current-image {
+                max-width: 200px;
+                max-height: 120px;
+                object-fit: contain;
+                display: block;
+                margin-bottom: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        {{ template "menu.html" . }}
+        <div class="container-fluid">
+            <h2 id="form-heading">Add Note</h2>
+            <p>
+                Notes rotate on the info board at
+                <a href="/infoboard" target="_blank" rel="noopener">/infoboard</a>.
+                Point a display Pi's <code>kiosk_url</code> at that page.
+            </p>
+            <form class="note-form" onsubmit="return false;" name="noteform">
+                <div class="form-group">
+                    <label for="note-message">Message</label>
+                    <textarea class="form-control" id="note-message" rows="3" maxlength="500" placeholder="e.g. Cash only at cashier 4"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="note-image">Image (optional)</label>
+                    <div id="current-image-wrap" style="display: none;">
+                        <img id="current-image" alt="" />
+                        <button class="btn btn-sm btn-outline-secondary" id="remove-image-btn" onclick="removeImage()">Remove image</button>
+                    </div>
+                    <input type="file" class="form-control-file" id="note-image" accept="image/png,image/jpeg,image/gif,image/webp">
+                    <small class="form-text text-muted">png, jpeg, gif, or webp. 5MB max.</small>
+                </div>
+                <div class="form-group">
+                    <label for="note-dwell">Seconds on screen</label>
+                    <input type="number" class="form-control" id="note-dwell" min="0" max="300" step="1" placeholder="0 = board default (20s)" style="max-width: 260px;">
+                    <small class="form-text text-muted">0 uses the board default. Otherwise 5 to 300.</small>
+                </div>
+                <div class="form-group">
+                    <label for="note-position">Position</label>
+                    <input type="number" class="form-control" id="note-position" step="1" placeholder="0" style="max-width: 200px;">
+                </div>
+                <div class="form-group form-check">
+                    <input type="checkbox" class="form-check-input" id="note-active" checked>
+                    <label class="form-check-label" for="note-active">Active (shown on the board)</label>
+                </div>
+                <button class="btn btn-primary" id="save-btn" onclick="saveNote()">Save</button>
+                <button class="btn btn-secondary" id="cancel-btn" onclick="resetForm()" style="display: none;">Cancel edit</button>
+            </form>
+            <div id="results"></div>
+        </div>
+
+        <div class="section-divider"></div>
+
+        <div class="container-fluid">
+            <h2>Existing Notes</h2>
+            <table id="note-table">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Message</th>
+                        <th>Image</th>
+                        <th>Dwell</th>
+                        <th>Active</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="note-table-body">
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            // Notes as last loaded from the server, in display order.
+            let allNotes = [];
+            // null when the form is creating, otherwise the id being edited.
+            let editingId = null;
+            // Image path for the note in the form: "" or a /uploads/... path
+            // the server handed back from an upload.
+            let formImageUrl = "";
+
+            function logLine(message, cssClass) {
+                const results = document.getElementById("results");
+                const line = document.createElement("div");
+                line.className = "log-line " + (cssClass || "");
+                line.innerText = message;
+                results.appendChild(line);
+            }
+
+            function clearLog() {
+                document.getElementById("results").innerHTML = "";
+            }
+
+            function cell(row, text) {
+                const td = document.createElement("td");
+                td.textContent = text;
+                row.appendChild(td);
+                return td;
+            }
+
+            function button(label, cssClass, onClick) {
+                const btn = document.createElement("button");
+                btn.className = "btn btn-sm " + cssClass;
+                btn.textContent = label;
+                btn.style.marginRight = "4px";
+                btn.addEventListener("click", onClick);
+                return btn;
+            }
+
+            async function loadNotes() {
+                const tbody = document.getElementById("note-table-body");
+                try {
+                    const response = await fetch("/notes/all", { credentials: "same-origin" });
+                    if (!response.ok) {
+                        throw new Error("request failed (" + response.status + ")");
+                    }
+                    allNotes = await response.json();
+                } catch (error) {
+                    tbody.replaceChildren();
+                    const row = document.createElement("tr");
+                    const td = cell(row, "Error loading notes: " + error.message);
+                    td.colSpan = 6;
+                    tbody.appendChild(row);
+                    return;
+                }
+
+                tbody.replaceChildren();
+                if (allNotes.length === 0) {
+                    const row = document.createElement("tr");
+                    const td = cell(row, "No notes yet");
+                    td.colSpan = 6;
+                    tbody.appendChild(row);
+                    return;
+                }
+
+                allNotes.forEach((note, i) => {
+                    const row = document.createElement("tr");
+                    if (!note.active) {
+                        row.className = "inactive";
+                    }
+
+                    const orderCell = cell(row, "");
+                    orderCell.appendChild(button("↑", "btn-outline-secondary", () => swapWith(i, i - 1)));
+                    orderCell.appendChild(button("↓", "btn-outline-secondary", () => swapWith(i, i + 1)));
+                    const positionLabel = document.createElement("span");
+                    positionLabel.textContent = note.position;
+                    orderCell.appendChild(positionLabel);
+
+                    cell(row, note.message);
+
+                    const imageCell = cell(row, "");
+                    if (note.image_url) {
+                        const thumb = document.createElement("img");
+                        thumb.className = "thumb";
+                        thumb.alt = "";
+                        thumb.src = note.image_url;
+                        imageCell.appendChild(thumb);
+                    } else {
+                        imageCell.textContent = "—";
+                    }
+
+                    cell(row, note.dwell_sec > 0 ? note.dwell_sec + "s" : "default");
+                    cell(row, note.active ? "yes" : "no");
+
+                    const actionCell = cell(row, "");
+                    actionCell.appendChild(button("Edit", "btn-outline-primary", () => editNote(note.id)));
+                    actionCell.appendChild(button(note.active ? "Deactivate" : "Activate", "btn-outline-secondary", () => toggleActive(note.id)));
+                    actionCell.appendChild(button("Delete", "btn-danger", () => deleteNote(note.id)));
+
+                    tbody.appendChild(row);
+                });
+            }
+
+            function noteById(id) {
+                return allNotes.find(n => n.id === id);
+            }
+
+            function noteBody(note) {
+                return {
+                    message: note.message,
+                    image_url: note.image_url,
+                    position: note.position,
+                    active: note.active,
+                    dwell_sec: note.dwell_sec
+                };
+            }
+
+            async function putNote(id, body) {
+                const response = await fetch("/notes/" + id, {
+                    method: "PUT",
+                    credentials: "same-origin",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.status === "error") {
+                    throw new Error(data.message || "request failed (" + response.status + ")");
+                }
+                return data;
+            }
+
+            // Move a row one slot and renumber everything 0..n-1. Swapping just
+            // the two position values would be a no-op whenever they happen to
+            // be equal, which nothing prevents; renumbering is always correct.
+            async function swapWith(fromIndex, toIndex) {
+                if (toIndex < 0 || toIndex >= allNotes.length) {
+                    return;
+                }
+                clearLog();
+
+                const reordered = allNotes.slice();
+                const [moved] = reordered.splice(fromIndex, 1);
+                reordered.splice(toIndex, 0, moved);
+
+                try {
+                    for (let i = 0; i < reordered.length; i++) {
+                        const note = reordered[i];
+                        if (note.position !== i) {
+                            await putNote(note.id, Object.assign(noteBody(note), { position: i }));
+                        }
+                    }
+                    logLine("Reordered.", "log-success");
+                } catch (error) {
+                    logLine("Reorder failed: " + error.message, "log-error");
+                }
+                loadNotes();
+            }
+
+            async function toggleActive(id) {
+                const note = noteById(id);
+                if (!note) {
+                    return;
+                }
+                clearLog();
+                try {
+                    await putNote(id, Object.assign(noteBody(note), { active: !note.active }));
+                    logLine(note.active ? "Note deactivated." : "Note activated.", "log-success");
+                } catch (error) {
+                    logLine("Update failed: " + error.message, "log-error");
+                }
+                loadNotes();
+            }
+
+            function editNote(id) {
+                const note = noteById(id);
+                if (!note) {
+                    return;
+                }
+                editingId = id;
+                formImageUrl = note.image_url;
+                document.getElementById("note-message").value = note.message;
+                document.getElementById("note-dwell").value = note.dwell_sec;
+                document.getElementById("note-position").value = note.position;
+                document.getElementById("note-active").checked = note.active;
+                document.getElementById("note-image").value = "";
+                document.getElementById("form-heading").textContent = "Edit Note";
+                document.getElementById("cancel-btn").style.display = "";
+                showCurrentImage();
+                clearLog();
+                window.scrollTo(0, 0);
+            }
+
+            function showCurrentImage() {
+                const wrap = document.getElementById("current-image-wrap");
+                const img = document.getElementById("current-image");
+                if (formImageUrl) {
+                    img.src = formImageUrl;
+                    wrap.style.display = "";
+                } else {
+                    img.removeAttribute("src");
+                    wrap.style.display = "none";
+                }
+            }
+
+            function removeImage() {
+                formImageUrl = "";
+                document.getElementById("note-image").value = "";
+                showCurrentImage();
+            }
+
+            function resetForm() {
+                editingId = null;
+                formImageUrl = "";
+                document.getElementById("note-message").value = "";
+                document.getElementById("note-dwell").value = "";
+                document.getElementById("note-position").value = "";
+                document.getElementById("note-active").checked = true;
+                document.getElementById("note-image").value = "";
+                document.getElementById("form-heading").textContent = "Add Note";
+                document.getElementById("cancel-btn").style.display = "none";
+                showCurrentImage();
+            }
+
+            // Upload first, then save the returned path with the note. The
+            // server rejects any image_url it did not generate itself.
+            async function uploadSelectedImage() {
+                const input = document.getElementById("note-image");
+                if (input.files.length === 0) {
+                    return formImageUrl;
+                }
+                const form = new FormData();
+                form.append("image", input.files[0]);
+                const response = await fetch("/notes/upload", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    body: form
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.image_url) {
+                    throw new Error(data.message || "upload failed (" + response.status + ")");
+                }
+                logLine("Image uploaded.", "log-success");
+                return data.image_url;
+            }
+
+            async function saveNote() {
+                clearLog();
+                const message = document.getElementById("note-message").value.trim();
+                if (message === "") {
+                    logLine("Enter a message.", "log-error");
+                    return;
+                }
+
+                const dwellRaw = parseInt(document.getElementById("note-dwell").value, 10);
+                const positionRaw = parseInt(document.getElementById("note-position").value, 10);
+                const saveBtn = document.getElementById("save-btn");
+                saveBtn.disabled = true;
+
+                try {
+                    const imageUrl = await uploadSelectedImage();
+                    const body = {
+                        message: message,
+                        image_url: imageUrl,
+                        position: Number.isInteger(positionRaw) ? positionRaw : 0,
+                        active: document.getElementById("note-active").checked,
+                        dwell_sec: Number.isInteger(dwellRaw) ? dwellRaw : 0
+                    };
+
+                    if (editingId === null) {
+                        const response = await fetch("/notes", {
+                            method: "POST",
+                            credentials: "same-origin",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify(body)
+                        });
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || data.status === "error") {
+                            throw new Error(data.message || "request failed (" + response.status + ")");
+                        }
+                        logLine("Note created.", "log-success");
+                    } else {
+                        await putNote(editingId, body);
+                        logLine("Note updated.", "log-success");
+                    }
+                    resetForm();
+                } catch (error) {
+                    logLine(error.message, "log-error");
+                }
+
+                saveBtn.disabled = false;
+                loadNotes();
+            }
+
+            async function deleteNote(id) {
+                if (!confirm("Delete this note? This cannot be undone.")) {
+                    return;
+                }
+                clearLog();
+                try {
+                    const response = await fetch("/notes/" + id, {
+                        method: "DELETE",
+                        credentials: "same-origin"
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok || data.status === "error") {
+                        logLine(data.message || "delete failed", "log-error");
+                    } else {
+                        logLine("Note deleted.", "log-success");
+                        if (editingId === id) {
+                            resetForm();
+                        }
+                    }
+                } catch (error) {
+                    logLine(error.message, "log-error");
+                }
+                loadNotes();
+            }
+
+            window.addEventListener("load", loadNotes);
+        </script>
+    </body>
+</html>

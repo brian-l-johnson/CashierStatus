@@ -51,6 +51,18 @@ func NewRouter() *gin.Engine {
 	router.DELETE("/cashiers/:cid", middleware.Authorize("admin"), cashiers.DeleteCashier)
 	router.GET("/cashiers/getupdate-sse", cashiers.GetCashierUpdates)
 
+	notes := new(controllers.NoteController)
+	// Unauthenticated: the info board Pis have no session.
+	router.GET("/notes", notes.GetNotes)
+	// /notes/all and /notes/manage only coexist with /notes/:nid because they
+	// are different methods. Adding a GET /notes/:nid would panic the router at
+	// startup — use a query parameter instead if one is ever needed.
+	router.GET("/notes/all", middleware.Authorize("admin"), notes.GetAllNotes)
+	router.POST("/notes", middleware.Authorize("admin"), notes.CreateNote)
+	router.POST("/notes/upload", middleware.Authorize("admin"), notes.UploadImage)
+	router.PUT("/notes/:nid", middleware.Authorize("admin"), notes.UpdateNote)
+	router.DELETE("/notes/:nid", middleware.Authorize("admin"), notes.DeleteNote)
+
 	auth := new(controllers.AuthController)
 	router.POST("/auth/mac", middleware.Authorize("update"), auth.Mac)
 	router.POST("/auth/verify", middleware.Authorize("view"), auth.Verify)
@@ -75,6 +87,20 @@ func NewRouter() *gin.Engine {
 
 	//static
 	router.Static("/static", "./static")
+
+	// Uploaded note images cannot live under ./static: that tree is baked into
+	// the image and would drop uploads on every redeploy. UPLOAD_DIR points at
+	// the same persistent volume as the database (see Dockerfile). Served
+	// unauthenticated because the display Pis have no session.
+	uploadDir := os.Getenv("UPLOAD_DIR")
+	if uploadDir == "" {
+		uploadDir = "./uploads"
+	}
+	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
+		panic("failed to create upload directory: " + err.Error())
+	}
+	controllers.UploadDir = uploadDir
+	router.Static("/uploads", uploadDir)
 
 	router.SetFuncMap(template.FuncMap{
 		"getAPIBaseURL": getAPIBaseURL,
@@ -128,6 +154,15 @@ func NewRouter() *gin.Engine {
 		user := session.Get("user")
 		roles := session.Get("roles")
 		c.HTML(http.StatusOK, "cashierscreate.html", gin.H{"title": "Manage Cashiers", "user": user, "roles": roles})
+	})
+	router.GET("/infoboard", func(c *gin.Context) {
+		c.HTML(http.StatusOK, "infoboard.html", gin.H{"title": "Info Board"})
+	})
+	router.GET("/notes/manage", middleware.AuthorizeHTML("admin"), func(c *gin.Context) {
+		session := sessions.Default(c)
+		user := session.Get("user")
+		roles := session.Get("roles")
+		c.HTML(http.StatusOK, "notes.html", gin.H{"title": "Info Board", "user": user, "roles": roles})
 	})
 	router.GET("/login", func(c *gin.Context) {
 		c.HTML(http.StatusOK, "login.html", gin.H{"title": "Login"})

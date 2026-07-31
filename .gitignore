@@ -27,6 +27,9 @@ cashierstatus.db.*
 #tmp directory
 tmp/
 
+# info board image uploads (runtime state, lives on the data volume in prod)
+uploads/
+
 # env file
 .env
 

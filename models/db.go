@@ -28,6 +28,7 @@ func Init() {
 	db.AutoMigrate(&Cashier{})
 	db.AutoMigrate(&User{})
 	db.AutoMigrate(&APIKey{})
+	db.AutoMigrate(&Note{})
 
 	var user User
 	result := db.First(&user, "name=?", "admin")

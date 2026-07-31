@@ -37,6 +37,11 @@ COPY --from=build --chown=nonroot:nonroot /data /data
 VOLUME ["/data"]
 ENV DB_PATH=/data/cashierstatus.db
 
+# Info board images land on the same volume, for the same reason: ./static is
+# baked into the image, so uploads written there would vanish on redeploy. The
+# app creates this directory at startup (distroless has no shell to do it here).
+ENV UPLOAD_DIR=/data/uploads
+
 USER nonroot:nonroot
 ENV GIN_MODE=release
 

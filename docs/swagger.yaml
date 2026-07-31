@@ -1,4 +1,19 @@
 definitions:
+  controllers.HealthResponse:
+    properties:
+      active_websockets:
+        type: integer
+      cashier_count:
+        type: integer
+      mode:
+        type: string
+      status:
+        type: string
+      timestamp:
+        type: string
+      uptime_seconds:
+        type: integer
+    type: object
   models.Cashier:
     properties:
       id:
@@ -20,12 +35,51 @@ definitions:
       value:
         type: string
     type: object
+  models.Note:
+    properties:
+      active:
+        type: boolean
+      dwell_sec:
+        description: 0 = use board default
+        type: integer
+      id:
+        type: integer
+      image_url:
+        type: string
+      message:
+        type: string
+      position:
+        type: integer
+    type: object
   models.OrderReq:
     properties:
       ordernum:
         type: string
       ordertime:
         type: string
+    type: object
+  models.RegisterReq:
+    properties:
+      name:
+        type: string
+      password:
+        type: string
+    type: object
+  models.SignControlReq:
+    properties:
+      control:
+        type: string
+      station:
+        type: string
+    type: object
+  models.UserReq:
+    properties:
+      active:
+        type: boolean
+      roles:
+        items:
+          type: string
+        type: array
     type: object
   models.VerifyMacReq:
     properties:
@@ -39,6 +93,87 @@ definitions:
 info:
   contact: {}
 paths:
+  /auth/api-keys:
+    get:
+      consumes:
+      - application/json
+      description: List all API keys (keys are hashed, only metadata shown)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              type: object
+            type: array
+      summary: List API Keys
+      tags:
+      - auth
+    post:
+      consumes:
+      - application/json
+      description: Create a new API key for programmatic access
+      parameters:
+      - description: API Key Data
+        in: body
+        name: apikey
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: Create API Key
+      tags:
+      - auth
+  /auth/api-keys/{key_id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deactivate an API key
+      parameters:
+      - description: Key ID
+        in: path
+        name: key_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: Revoke API Key
+      tags:
+      - auth
+  /auth/api-keys/validate:
+    post:
+      consumes:
+      - application/json
+      description: Check if an API key is valid and active
+      parameters:
+      - description: API Key to validate
+        in: body
+        name: apikey
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: Validate API Key
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
@@ -97,6 +232,49 @@ paths:
       summary: Calculate HMAC for message
       tags:
       - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a user
+      parameters:
+      - description: Login Data
+        in: body
+        name: register
+        required: true
+        schema:
+          $ref: '#/definitions/models.RegisterReq'
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Register User
+      tags:
+      - user
+  /auth/sign-control:
+    post:
+      consumes:
+      - application/json
+      description: Ed25519-sign a control command (e.g. setup-station) so cashier
+        stations can verify it came from this server
+      parameters:
+      - description: control command data
+        in: body
+        name: signcontrol
+        required: true
+        schema:
+          $ref: '#/definitions/models.SignControlReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: object
+      summary: Sign a control QR payload
+      tags:
+      - Auth
   /auth/status:
     get:
       consumes:
@@ -110,6 +288,69 @@ paths:
           schema:
             type: string
       summary: Auth Status
+      tags:
+      - user
+  /auth/user/{uid}:
+    delete:
+      consumes:
+      - application/json
+      description: delete a user
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: delete user
+      tags:
+      - user
+  /auth/users:
+    get:
+      consumes:
+      - application/json
+      description: List users on the sytem
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: json
+      summary: List users
+      tags:
+      - user
+  /auth/users/{uid}:
+    put:
+      consumes:
+      - application/json
+      description: update users attributes
+      parameters:
+      - description: User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.UserReq'
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: update user
       tags:
       - user
   /auth/verify:
@@ -213,15 +454,130 @@ paths:
     get:
       consumes:
       - application/json
-      description: Health check
+      description: Health check with system status
       produces:
-      - text/plain
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.HealthResponse'
+      summary: Health Check
+      tags:
+      - status
+  /notes:
+    get:
+      consumes:
+      - application/json
+      description: 'Active notes ordered for display. Unauthenticated: display Pis
+        have no session.'
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Note'
+            type: array
+        "304":
+          description: Not Modified
+          schema:
+            type: string
+      summary: Get active notes for the info board
+      tags:
+      - Notes
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: note data
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/models.Note'
       responses:
         "200":
           description: OK
           schema:
             type: string
-      summary: Health Check
+      summary: Create a note
       tags:
-      - status
+      - Notes
+  /notes/{nid}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft deletes the note. Any uploaded image is intentionally left
+        on disk.
+      parameters:
+      - description: Note ID
+        in: path
+        name: nid
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Delete a note
+      tags:
+      - Notes
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Note ID
+        in: path
+        name: nid
+        required: true
+        type: string
+      - description: note data
+        in: body
+        name: note
+        required: true
+        schema:
+          $ref: '#/definitions/models.Note'
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Update a note
+      tags:
+      - Notes
+  /notes/all:
+    get:
+      consumes:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Note'
+            type: array
+      summary: Get all notes including inactive ones
+      tags:
+      - Notes
+  /notes/upload:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Returns the /uploads path to store on a note. The stored filename
+        and extension are generated server side from the sniffed content type.
+      parameters:
+      - description: image file
+        in: formData
+        name: image
+        required: true
+        type: file
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Upload an image for a note
+      tags:
+      - Notes
 swagger: "2.0"

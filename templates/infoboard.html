@@ -1,0 +1,337 @@
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no" />
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+        <title>Info Board</title>
+        <link href="/static/common.css" rel="stylesheet" />
+        <style>
+            /* Sized for a TV read at a distance. Palette comes from common.css. */
+            body {
+                overflow: hidden;
+                font-family: 'neuropol_x', Gotham, "Helvetica Neue", Helvetica, Arial, "sans-serif";
+            }
+
+            #slide {
+                flex: 1 1 auto;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 3vh;
+                padding: 4vh 6vw;
+                text-align: center;
+                min-height: 0;
+            }
+
+            #slide.fading {
+                animation: slidein 400ms ease;
+            }
+
+            @keyframes slidein {
+                from { opacity: 0; transform: translateY(1.5vh); }
+                to   { opacity: 1; transform: none; }
+            }
+
+            #slide-image {
+                max-height: 55vh;
+                max-width: 80vw;
+                object-fit: contain;
+                border-radius: 8px;
+            }
+
+            #slide-message {
+                margin: 0;
+                font-size: clamp(2rem, 5.5vw, 6rem);
+                font-weight: 700;
+                line-height: 1.15;
+                letter-spacing: 0.01em;
+            }
+
+            #slide-message.placeholder {
+                color: var(--color-mint);
+                opacity: 0.65;
+                font-weight: 600;
+            }
+
+            #dots {
+                flex: 0 0 auto;
+                display: flex;
+                justify-content: center;
+                gap: 0.9vw;
+                padding-bottom: 1.5vh;
+            }
+
+            #dots .dot {
+                width: 0.9vw;
+                height: 0.9vw;
+                max-width: 14px;
+                max-height: 14px;
+                min-width: 8px;
+                min-height: 8px;
+                border-radius: 50%;
+                background-color: rgba(255, 255, 255, 0.25);
+            }
+
+            #dots .dot.active {
+                background-color: var(--color-mint);
+            }
+
+            #progress {
+                flex: 0 0 auto;
+                height: 6px;
+                background-color: rgba(255, 255, 255, 0.12);
+            }
+
+            #progress-bar {
+                height: 100%;
+                width: 0;
+                background-color: var(--color-gold);
+            }
+
+            .menu {
+                padding: 0.5rem;
+            }
+
+            .menu a {
+                color: #fff;
+                padding: 0 0.75rem;
+            }
+        </style>
+        <script>
+            const NOTES_PATH = "/notes";
+            const POLL_MS = 60000;
+            const CACHE_KEY = "infoboard.notes";
+            const FALLBACK_DWELL_SEC = 20;
+
+            // What we are currently rotating through.
+            let notes = [];
+            // Fetched but not yet shown. Swapped in only at a slide boundary --
+            // applying it immediately would restart the rotation on every poll
+            // and park the board on slide 1 forever.
+            let pending = null;
+            let index = 0;
+            let etag = null;
+            let slideTimer = null;
+            // Serialized form of what is on screen, so a poll that changed
+            // nothing visible does not rebuild the DOM.
+            let renderedKey = null;
+            let defaultDwellSec = FALLBACK_DWELL_SEC;
+
+            function readDefaultDwell() {
+                const raw = new URLSearchParams(window.location.search).get("dwell");
+                const parsed = parseInt(raw, 10);
+                // Same bounds the server clamps per-note dwell to.
+                if (Number.isInteger(parsed) && parsed >= 5 && parsed <= 300) {
+                    return parsed;
+                }
+                return FALLBACK_DWELL_SEC;
+            }
+
+            function dwellMsFor(note) {
+                const seconds = note && note.dwell_sec > 0 ? note.dwell_sec : defaultDwellSec;
+                return seconds * 1000;
+            }
+
+            function loadCachedNotes() {
+                try {
+                    const cached = JSON.parse(localStorage.getItem(CACHE_KEY));
+                    return Array.isArray(cached) ? cached : [];
+                } catch (error) {
+                    return [];
+                }
+            }
+
+            function cacheNotes(data) {
+                try {
+                    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+                } catch (error) {
+                    // A full or disabled localStorage is not worth failing over.
+                    console.warn("could not cache notes:", error);
+                }
+            }
+
+            // Text is always set with textContent and images always via src on a
+            // real element. The message comes from an admin form, so building
+            // this with innerHTML would make that form a stored-XSS sink aimed
+            // at a kiosk browser.
+            function render(note) {
+                const key = JSON.stringify(note || null);
+                if (key === renderedKey) {
+                    return;
+                }
+                renderedKey = key;
+
+                const slide = document.getElementById("slide");
+                const image = document.getElementById("slide-image");
+                const message = document.getElementById("slide-message");
+
+                if (!note) {
+                    message.textContent = "No notices right now";
+                    message.classList.add("placeholder");
+                    image.hidden = true;
+                    image.removeAttribute("src");
+                } else {
+                    message.textContent = note.message;
+                    message.classList.remove("placeholder");
+                    if (note.image_url) {
+                        image.hidden = false;
+                        image.src = note.image_url;
+                    } else {
+                        image.hidden = true;
+                        image.removeAttribute("src");
+                    }
+                }
+
+                slide.classList.remove("fading");
+                void slide.offsetWidth; // restart the animation
+                slide.classList.add("fading");
+            }
+
+            function renderDots() {
+                const dots = document.getElementById("dots");
+                // A single note needs no position indicator.
+                if (notes.length < 2) {
+                    dots.replaceChildren();
+                    return;
+                }
+                if (dots.childElementCount !== notes.length) {
+                    dots.replaceChildren();
+                    for (let i = 0; i < notes.length; i++) {
+                        const dot = document.createElement("div");
+                        dot.className = "dot";
+                        dots.appendChild(dot);
+                    }
+                }
+                Array.from(dots.children).forEach((dot, i) => {
+                    dot.classList.toggle("active", i === index);
+                });
+            }
+
+            function startProgress(durationMs) {
+                const bar = document.getElementById("progress-bar");
+                bar.style.transition = "none";
+                bar.style.width = "0%";
+                void bar.offsetWidth; // commit the reset before animating
+                bar.style.transition = "width " + durationMs + "ms linear";
+                bar.style.width = "100%";
+            }
+
+            // Warm the browser cache for the slide after this one, so advancing
+            // does not flash an empty layout while the image loads.
+            function preloadNext() {
+                if (notes.length < 2) {
+                    return;
+                }
+                const next = notes[(index + 1) % notes.length];
+                if (next && next.image_url) {
+                    const preloader = new Image();
+                    preloader.src = next.image_url;
+                }
+            }
+
+            function applyPending() {
+                if (pending === null) {
+                    return;
+                }
+                notes = pending;
+                pending = null;
+                if (index >= notes.length) {
+                    index = 0;
+                }
+            }
+
+            function showCurrent() {
+                render(notes.length === 0 ? null : notes[index]);
+                renderDots();
+                preloadNext();
+
+                const durationMs = dwellMsFor(notes[index]);
+                startProgress(durationMs);
+                clearTimeout(slideTimer);
+                slideTimer = setTimeout(advance, durationMs);
+            }
+
+            function advance() {
+                applyPending();
+                if (notes.length > 0) {
+                    index = (index + 1) % notes.length;
+                }
+                showCurrent();
+            }
+
+            function restart() {
+                index = 0;
+                showCurrent();
+            }
+
+            async function poll() {
+                try {
+                    const headers = etag ? { "If-None-Match": etag } : {};
+                    const response = await fetch(NOTES_PATH, { headers: headers, cache: "no-store" });
+                    if (response.status === 304) {
+                        return;
+                    }
+                    if (!response.ok) {
+                        throw new Error("request failed (" + response.status + ")");
+                    }
+                    const data = await response.json();
+                    etag = response.headers.get("ETag");
+                    cacheNotes(data);
+
+                    if (notes.length === 0) {
+                        // Nothing is rotating yet, so there is no boundary to
+                        // wait for -- show it now instead of after a full dwell.
+                        pending = data;
+                        applyPending();
+                        restart();
+                    } else {
+                        pending = data;
+                    }
+                } catch (error) {
+                    // Keep rotating whatever is already on screen and try again
+                    // on the next tick. A blank board is worse than a stale one.
+                    console.error("notes poll failed:", error);
+                }
+            }
+
+            function checkKeyPressed(evt) {
+                if (evt.keyCode == "77") { //m
+                    document.getElementById('menu').classList.remove("hidden");
+                } else if (evt.keyCode == "27") { //esc
+                    document.getElementById('menu').classList.add("hidden");
+                }
+            }
+
+            function startUp() {
+                defaultDwellSec = readDefaultDwell();
+
+                // A broken image is uglier than none at all, and the cached list
+                // can outlive the server that serves the images.
+                document.getElementById("slide-image").addEventListener("error", function () {
+                    this.hidden = true;
+                });
+
+                notes = loadCachedNotes();
+                showCurrent();
+
+                poll();
+                setInterval(poll, POLL_MS);
+            }
+
+            window.addEventListener("load", startUp);
+            window.addEventListener("keydown", checkKeyPressed, false);
+        </script>
+    </head>
+    <body>
+        <div id="menu" class="menu hidden">
+            <a href="/notes/manage">Manage Info Board</a>
+            <a href="/">Cashier Status</a>
+        </div>
+        <div id="slide">
+            <img id="slide-image" alt="" hidden />
+            <p id="slide-message"></p>
+        </div>
+        <div id="dots"></div>
+        <div id="progress"><div id="progress-bar"></div></div>
+    </body>
+</html>
