@@ -20,9 +20,11 @@
 # Go workspace file
 go.work
 
-#db file
+#db file (-wal/-shm are the WAL sidecars; the .* pattern won't catch them)
 cashierstatus.db
 cashierstatus.db.*
+cashierstatus.db-wal
+cashierstatus.db-shm
 
 #tmp directory
 tmp/

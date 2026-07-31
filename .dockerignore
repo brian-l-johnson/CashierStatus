@@ -8,6 +8,8 @@
 .env
 *.db
 *.db.old
+*.db-wal
+*.db-shm
 uploads/
 
 # Editor/backup and scratch files
