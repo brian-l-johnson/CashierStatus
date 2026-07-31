@@ -1,7 +1,7 @@
 definitions:
   controllers.HealthResponse:
     properties:
-      active_websockets:
+      active_sse_clients:
         type: integer
       cashier_count:
         type: integer

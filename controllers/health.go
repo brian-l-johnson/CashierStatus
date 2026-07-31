@@ -14,12 +14,12 @@ var startTime = time.Now()
 
 // HealthResponse represents the health check response
 type HealthResponse struct {
-	Status          string `json:"status"`
-	Mode            string `json:"mode"`
-	UptimeSeconds   int64  `json:"uptime_seconds"`
-	Timestamp       string `json:"timestamp"`
-	CashierCount    int64  `json:"cashier_count"`
-	ActiveWebsockets int   `json:"active_websockets"`
+	Status           string `json:"status"`
+	Mode             string `json:"mode"`
+	UptimeSeconds    int64  `json:"uptime_seconds"`
+	Timestamp        string `json:"timestamp"`
+	CashierCount     int64  `json:"cashier_count"`
+	ActiveSSEClients int    `json:"active_sse_clients"`
 }
 
 // &@BasePath	/
@@ -42,6 +42,14 @@ func (h HealthController) Status(c *gin.Context) {
 	var cashierCount int64
 	db.Model(&models.Cashier{}).Count(&cashierCount)
 
+	// clients is shared with the SSE handlers in cashiers.go, which mutate it
+	// as displays connect and disconnect. Reading a map while another
+	// goroutine writes it is a fatal runtime error in Go -- not a recoverable
+	// panic -- so gin.Recovery() would not save us here.
+	mutex.Lock()
+	activeClients := len(clients)
+	mutex.Unlock()
+
 	// Build response
 	response := HealthResponse{
 		Status:           "healthy",
@@ -49,7 +57,7 @@ func (h HealthController) Status(c *gin.Context) {
 		UptimeSeconds:    int64(time.Since(startTime).Seconds()),
 		Timestamp:        time.Now().UTC().Format(time.RFC3339),
 		CashierCount:     cashierCount,
-		ActiveWebsockets: len(clients), // connected SSE clients from cashiers.go
+		ActiveSSEClients: activeClients,
 	}
 
 	c.JSON(http.StatusOK, response)

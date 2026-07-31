@@ -762,7 +762,7 @@ const docTemplate = `{
         "controllers.HealthResponse": {
             "type": "object",
             "properties": {
-                "active_websockets": {
+                "active_sse_clients": {
                     "type": "integer"
                 },
                 "cashier_count": {
